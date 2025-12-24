@@ -13,11 +13,12 @@ const captions = [
 ];
 
 interface NarrativeCaptionProps {
+  caption?: string;
   onRefresh?: () => void;
 }
 
-const NarrativeCaption = ({ onRefresh }: NarrativeCaptionProps) => {
-  const randomCaption = captions[Math.floor(Math.random() * captions.length)];
+const NarrativeCaption = ({ caption, onRefresh }: NarrativeCaptionProps) => {
+  const displayCaption = caption || captions[Math.floor(Math.random() * captions.length)];
 
   return (
     <motion.div
@@ -39,13 +40,13 @@ const NarrativeCaption = ({ onRefresh }: NarrativeCaptionProps) => {
 
         {/* Caption text */}
         <motion.p
-          key={randomCaption}
+          key={displayCaption}
           className="font-serif text-lg italic text-foreground/90 leading-relaxed"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          {randomCaption}
+          {displayCaption}
         </motion.p>
 
         {/* AI attribution */}

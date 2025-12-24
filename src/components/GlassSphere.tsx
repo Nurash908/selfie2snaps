@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, User } from "lucide-react";
-import { useState, useCallback } from "react";
+import { Upload, User, Camera, Sparkles } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 interface GlassSphereProps {
   label: string;
@@ -13,80 +13,147 @@ interface GlassSphereProps {
 const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left" }: GlassSphereProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isAbsorbing, setIsAbsorbing] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
+  const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
+  const sphereRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (sphereRef.current) {
+      const rect = sphereRef.current.getBoundingClientRect();
+      setMousePos({
+        x: (e.clientX - rect.left) / rect.width,
+        y: (e.clientY - rect.top) / rect.height,
+      });
+    }
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("image/")) {
+      const rect = sphereRef.current?.getBoundingClientRect();
+      if (rect) {
+        setRipples(prev => [...prev, { id: Date.now(), x: e.clientX - rect.left, y: e.clientY - rect.top }]);
+      }
       setIsAbsorbing(true);
       setTimeout(() => {
         onImageUpload(file);
         setIsAbsorbing(false);
-      }, 600);
+      }, 800);
     }
   }, [onImageUpload]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setRipples(prev => [...prev, { id: Date.now(), x: 100, y: 100 }]);
       setIsAbsorbing(true);
       setTimeout(() => {
         onImageUpload(file);
         setIsAbsorbing(false);
-      }, 600);
+      }, 800);
     }
   }, [onImageUpload]);
+
+  // 3D rotation based on mouse position
+  const rotateX = (mousePos.y - 0.5) * -20;
+  const rotateY = (mousePos.x - 0.5) * 20;
 
   return (
     <motion.div
       className="relative"
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: variant === "left" ? 0.2 : 0.4, duration: 0.6 }}
+      initial={{ opacity: 0, scale: 0.8, y: 50 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ delay: variant === "left" ? 0.2 : 0.4, duration: 0.8, type: "spring" }}
+      style={{ perspective: "1000px" }}
     >
-      {/* Glow effect */}
+      {/* Outer glow ring */}
       <motion.div
-        className="absolute inset-0 rounded-full blur-3xl"
+        className="absolute -inset-4 rounded-full blur-2xl"
         style={{
-          background: variant === "left" 
-            ? "radial-gradient(circle, hsl(270 95% 65% / 0.3), transparent 70%)"
-            : "radial-gradient(circle, hsl(35 100% 60% / 0.3), transparent 70%)"
+          background: variant === "left"
+            ? "radial-gradient(circle, hsl(270 95% 65% / 0.4), transparent 70%)"
+            : "radial-gradient(circle, hsl(35 100% 60% / 0.4), transparent 70%)",
         }}
         animate={{
-          scale: isDragging ? 1.3 : isConnected ? [1, 1.1, 1] : 1,
-          opacity: isDragging ? 0.8 : isConnected ? 0.6 : 0.4,
+          scale: isDragging ? 1.5 : isConnected ? [1, 1.2, 1] : 1,
+          opacity: isDragging ? 1 : isConnected ? [0.4, 0.7, 0.4] : 0.3,
         }}
-        transition={{ duration: 0.5, repeat: isConnected ? Infinity : 0, repeatDelay: 1 }}
+        transition={{ duration: 2, repeat: isConnected ? Infinity : 0 }}
       />
 
-      {/* Main sphere */}
+      {/* Orbiting particles */}
+      {isConnected && [...Array(6)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-2 h-2 rounded-full"
+          style={{
+            background: i % 2 === 0 ? "hsl(270 95% 75%)" : "hsl(35 100% 70%)",
+            left: "50%",
+            top: "50%",
+          }}
+          animate={{
+            x: Math.cos((i / 6) * Math.PI * 2 + Date.now() / 1000) * 120,
+            y: Math.sin((i / 6) * Math.PI * 2 + Date.now() / 1000) * 120,
+            scale: [0.5, 1, 0.5],
+            opacity: [0.3, 0.8, 0.3],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            delay: i * 0.5,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+
+      {/* Main sphere with 3D effect */}
       <motion.div
-        className="relative w-48 h-48 md:w-56 md:h-56 rounded-full cursor-pointer overflow-hidden"
+        ref={sphereRef}
+        className="relative w-52 h-52 md:w-60 md:h-60 rounded-full cursor-pointer overflow-hidden"
         style={{
-          background: "linear-gradient(135deg, hsl(0 0% 15% / 0.6), hsl(0 0% 8% / 0.8))",
-          backdropFilter: "blur(20px)",
-          border: "1px solid hsl(0 0% 100% / 0.1)",
-          boxShadow: `
-            inset 0 1px 1px hsl(0 0% 100% / 0.1),
-            0 0 40px ${variant === "left" ? "hsl(270 95% 65% / 0.2)" : "hsl(35 100% 60% / 0.2)"},
-            0 20px 40px hsl(0 0% 0% / 0.3)
+          background: `
+            radial-gradient(circle at ${mousePos.x * 100}% ${mousePos.y * 30}%, hsl(0 0% 25% / 0.8), transparent 50%),
+            linear-gradient(135deg, hsl(0 0% 18% / 0.7), hsl(0 0% 8% / 0.9))
           `,
+          backdropFilter: "blur(20px)",
+          border: "1px solid hsl(0 0% 100% / 0.15)",
+          boxShadow: `
+            inset 0 2px 4px hsl(0 0% 100% / 0.1),
+            inset 0 -10px 20px hsl(0 0% 0% / 0.3),
+            0 0 60px ${variant === "left" ? "hsl(270 95% 65% / 0.25)" : "hsl(35 100% 60% / 0.25)"},
+            0 30px 60px hsl(0 0% 0% / 0.4)
+          `,
+          transformStyle: "preserve-3d",
         }}
         animate={{
-          scale: isDragging ? 1.1 : isAbsorbing ? 0.95 : 1,
-          y: [0, -10, 0],
+          scale: isDragging ? 1.15 : isAbsorbing ? 0.9 : 1,
+          rotateX: isDragging ? 0 : rotateX,
+          rotateY: isDragging ? 0 : rotateY,
+          y: [0, -15, 0],
         }}
         transition={{
-          scale: { duration: 0.3 },
-          y: { duration: 6, repeat: Infinity, ease: "easeInOut" }
+          scale: { duration: 0.4, type: "spring" },
+          rotateX: { duration: 0.1 },
+          rotateY: { duration: 0.1 },
+          y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
         }}
+        onMouseMove={handleMouseMove}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.95 }}
       >
+        {/* Glass highlight */}
+        <motion.div
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{
+            background: `radial-gradient(ellipse at ${mousePos.x * 100}% ${mousePos.y * 50}%, hsl(0 0% 100% / 0.2), transparent 60%)`,
+          }}
+        />
+
         <input
           type="file"
           accept="image/*"
@@ -96,72 +163,158 @@ const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left
 
         <AnimatePresence mode="wait">
           {image ? (
-            <motion.img
+            <motion.div
               key="image"
-              src={image}
-              alt="Uploaded"
-              className="absolute inset-0 w-full h-full object-cover rounded-full"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              transition={{ duration: 0.4 }}
-            />
+              className="absolute inset-0 rounded-full overflow-hidden"
+              initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, scale: 0.5, rotate: 10 }}
+              transition={{ duration: 0.5, type: "spring" }}
+            >
+              <img
+                src={image}
+                alt="Uploaded"
+                className="w-full h-full object-cover"
+              />
+              {/* Overlay shimmer */}
+              <motion.div
+                className="absolute inset-0"
+                style={{
+                  background: "linear-gradient(135deg, transparent 40%, hsl(0 0% 100% / 0.15) 50%, transparent 60%)",
+                  backgroundSize: "200% 200%",
+                }}
+                animate={{ backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"] }}
+                transition={{ duration: 4, repeat: Infinity }}
+              />
+            </motion.div>
           ) : (
             <motion.div
               key="placeholder"
-              className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
               <motion.div
-                animate={{ 
-                  scale: isDragging ? 1.2 : 1,
-                  opacity: isDragging ? 1 : 0.6 
+                className="relative"
+                animate={{
+                  scale: isDragging ? 1.3 : 1,
+                  rotate: isDragging ? [0, -10, 10, 0] : 0,
                 }}
+                transition={{ duration: 0.3 }}
               >
+                <motion.div
+                  className="absolute -inset-3 rounded-full"
+                  style={{
+                    background: variant === "left"
+                      ? "radial-gradient(circle, hsl(270 95% 65% / 0.3), transparent)"
+                      : "radial-gradient(circle, hsl(35 100% 60% / 0.3), transparent)",
+                  }}
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
                 {variant === "left" ? (
-                  <User className="w-12 h-12 text-primary" />
+                  <Camera className="w-14 h-14 text-primary relative z-10" />
                 ) : (
-                  <User className="w-12 h-12 text-secondary" />
+                  <User className="w-14 h-14 text-secondary relative z-10" />
                 )}
               </motion.div>
-              <span className="text-sm text-muted-foreground font-medium tracking-wide">
-                {isDragging ? "Drop here" : "Upload selfie"}
-              </span>
-              <Upload className="w-4 h-4 text-muted-foreground" />
+              <motion.span
+                className="text-sm text-muted-foreground font-medium tracking-wide"
+                animate={{ opacity: isDragging ? 1 : [0.6, 1, 0.6] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                {isDragging ? "Drop to upload!" : "Tap or drag selfie"}
+              </motion.span>
+              <motion.div
+                animate={{ y: [0, -5, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <Upload className="w-5 h-5 text-muted-foreground/60" />
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Absorbing animation */}
+        {/* Ripple effects on upload */}
+        {ripples.map((ripple) => (
+          <motion.div
+            key={ripple.id}
+            className="absolute rounded-full border-2 pointer-events-none"
+            style={{
+              left: ripple.x,
+              top: ripple.y,
+              borderColor: variant === "left" ? "hsl(270 95% 65%)" : "hsl(35 100% 60%)",
+            }}
+            initial={{ width: 0, height: 0, x: 0, y: 0, opacity: 1 }}
+            animate={{ width: 300, height: 300, x: -150, y: -150, opacity: 0 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            onAnimationComplete={() => {
+              setRipples((prev) => prev.filter((r) => r.id !== ripple.id));
+            }}
+          />
+        ))}
+
+        {/* Absorbing vortex animation */}
         <AnimatePresence>
           {isAbsorbing && (
             <motion.div
               className="absolute inset-0 rounded-full"
               style={{
-                background: variant === "left"
-                  ? "radial-gradient(circle, hsl(270 95% 65% / 0.5), transparent)"
-                  : "radial-gradient(circle, hsl(35 100% 60% / 0.5), transparent)"
+                background: `conic-gradient(from 0deg, ${
+                  variant === "left" ? "hsl(270 95% 65%)" : "hsl(35 100% 60%)"
+                }, transparent, ${
+                  variant === "left" ? "hsl(270 95% 65%)" : "hsl(35 100% 60%)"
+                })`,
               }}
-              initial={{ scale: 2, opacity: 0 }}
-              animate={{ scale: 0, opacity: 1 }}
+              initial={{ scale: 2, opacity: 0, rotate: 0 }}
+              animate={{ scale: 0, opacity: [0, 0.8, 0], rotate: 720 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.8 }}
             />
+          )}
+        </AnimatePresence>
+
+        {/* Success sparkles */}
+        <AnimatePresence>
+          {image && (
+            <>
+              {[...Array(8)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute"
+                  style={{
+                    left: "50%",
+                    top: "50%",
+                  }}
+                  initial={{ scale: 0, x: 0, y: 0 }}
+                  animate={{
+                    scale: [0, 1, 0],
+                    x: Math.cos((i / 8) * Math.PI * 2) * 80,
+                    y: Math.sin((i / 8) * Math.PI * 2) * 80,
+                  }}
+                  transition={{ delay: 0.1 * i, duration: 0.6 }}
+                >
+                  <Sparkles className="w-4 h-4 text-secondary" />
+                </motion.div>
+              ))}
+            </>
           )}
         </AnimatePresence>
       </motion.div>
 
-      {/* Label */}
+      {/* Label with glow */}
       <motion.p
-        className="text-center mt-4 text-sm font-medium tracking-widest uppercase"
+        className="text-center mt-5 text-sm font-semibold tracking-[0.2em] uppercase"
         style={{
-          color: variant === "left" ? "hsl(270 95% 75%)" : "hsl(35 100% 70%)"
+          color: variant === "left" ? "hsl(270 95% 75%)" : "hsl(35 100% 70%)",
+          textShadow: variant === "left"
+            ? "0 0 20px hsl(270 95% 65% / 0.5)"
+            : "0 0 20px hsl(35 100% 60% / 0.5)",
         }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
       >
         {label}
       </motion.p>

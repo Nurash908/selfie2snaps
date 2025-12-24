@@ -1,0 +1,4 @@
+project_id = "pkoaewezgeyhivzzhvbf"
+
+[functions.generate-snap]
+verify_jwt = false
