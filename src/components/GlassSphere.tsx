@@ -1,21 +1,25 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, User, Camera, Sparkles } from "lucide-react";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { Upload, User, Camera, Sparkles, Check } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 interface GlassSphereProps {
   label: string;
   image: string | null;
   onImageUpload: (file: File) => void;
+  onRemoveImage: () => void;
   isConnected?: boolean;
   variant?: "left" | "right";
 }
 
-const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left" }: GlassSphereProps) => {
+const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, variant = "left" }: GlassSphereProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isAbsorbing, setIsAbsorbing] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
+  const [isHovered, setIsHovered] = useState(false);
   const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
   const sphereRef = useRef<HTMLDivElement>(null);
+  const { playSound } = useSoundEffects();
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (sphereRef.current) {
@@ -32,6 +36,7 @@ const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("image/")) {
+      playSound('upload');
       const rect = sphereRef.current?.getBoundingClientRect();
       if (rect) {
         setRipples(prev => [...prev, { id: Date.now(), x: e.clientX - rect.left, y: e.clientY - rect.top }]);
@@ -42,11 +47,12 @@ const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left
         setIsAbsorbing(false);
       }, 800);
     }
-  }, [onImageUpload]);
+  }, [onImageUpload, playSound]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      playSound('upload');
       setRipples(prev => [...prev, { id: Date.now(), x: 100, y: 100 }]);
       setIsAbsorbing(true);
       setTimeout(() => {
@@ -54,7 +60,7 @@ const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left
         setIsAbsorbing(false);
       }, 800);
     }
-  }, [onImageUpload]);
+  }, [onImageUpload, playSound]);
 
   // 3D rotation based on mouse position
   const rotateX = (mousePos.y - 0.5) * -20;
@@ -83,7 +89,7 @@ const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left
         transition={{ duration: 2, repeat: isConnected ? Infinity : 0 }}
       />
 
-      {/* Orbiting particles */}
+      {/* Orbiting particles when connected */}
       {isConnected && [...Array(6)].map((_, i) => (
         <motion.div
           key={i}
@@ -140,6 +146,11 @@ const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left
           y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
         }}
         onMouseMove={handleMouseMove}
+        onMouseEnter={() => {
+          setIsHovered(true);
+          if (image) playSound('hover');
+        }}
+        onMouseLeave={() => setIsHovered(false)}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
@@ -171,14 +182,54 @@ const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left
               exit={{ opacity: 0, scale: 0.5, rotate: 10 }}
               transition={{ duration: 0.5, type: "spring" }}
             >
-              <img
+              <motion.img
                 src={image}
                 alt="Uploaded"
                 className="w-full h-full object-cover"
+                animate={{
+                  filter: isHovered ? 'blur(4px) brightness(0.8)' : 'blur(0px) brightness(1)',
+                }}
+                transition={{ duration: 0.3 }}
               />
+              
+              {/* Premium blur overlay on hover */}
+              <AnimatePresence>
+                {isHovered && (
+                  <motion.div
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/20 backdrop-blur-sm"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <motion.div
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-background/60 backdrop-blur-md"
+                      initial={{ y: 10 }}
+                      animate={{ y: 0 }}
+                    >
+                      <Check className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-medium text-foreground">Uploaded</span>
+                    </motion.div>
+                    <motion.button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        playSound('click');
+                        onRemoveImage();
+                      }}
+                      className="text-xs text-muted-foreground hover:text-destructive transition-colors underline"
+                      initial={{ y: 10, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.1 }}
+                    >
+                      Remove
+                    </motion.button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Overlay shimmer */}
               <motion.div
-                className="absolute inset-0"
+                className="absolute inset-0 pointer-events-none"
                 style={{
                   background: "linear-gradient(135deg, transparent 40%, hsl(0 0% 100% / 0.15) 50%, transparent 60%)",
                   backgroundSize: "200% 200%",
@@ -186,6 +237,20 @@ const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left
                 animate={{ backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"] }}
                 transition={{ duration: 4, repeat: Infinity }}
               />
+
+              {/* Success indicator */}
+              <motion.div
+                className="absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center z-20"
+                style={{
+                  background: "linear-gradient(135deg, hsl(145 80% 45%), hsl(145 80% 35%))",
+                  boxShadow: "0 4px 15px hsl(145 80% 45% / 0.4)",
+                }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", delay: 0.3 }}
+              >
+                <Check className="w-4 h-4 text-foreground" strokeWidth={3} />
+              </motion.div>
             </motion.div>
           ) : (
             <motion.div
@@ -220,7 +285,7 @@ const GlassSphere = ({ label, image, onImageUpload, isConnected, variant = "left
                 )}
               </motion.div>
               <motion.span
-                className="text-sm text-muted-foreground font-medium tracking-wide"
+                className="text-sm text-muted-foreground font-medium tracking-wide text-center px-4"
                 animate={{ opacity: isDragging ? 1 : [0.6, 1, 0.6] }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
