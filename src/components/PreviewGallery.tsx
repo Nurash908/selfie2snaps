@@ -111,15 +111,15 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
         </motion.button>
 
         {/* Main image */}
-        <div className="relative rounded-3xl overflow-hidden" style={{ perspective: '1000px' }}>
+        <div className="relative rounded-3xl overflow-hidden group" style={{ perspective: '1000px' }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={currentIndex}
               className="relative aspect-[4/5] w-full max-h-[70vh]"
-              initial={{ opacity: 0, rotateY: -10 }}
-              animate={{ opacity: 1, rotateY: 0 }}
-              exit={{ opacity: 0, rotateY: 10 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, rotateY: -10, scale: 0.95 }}
+              animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+              exit={{ opacity: 0, rotateY: 10, scale: 0.95 }}
+              transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
               onClick={() => {
                 playSound('preview');
                 setIsFullscreen(true);
@@ -134,20 +134,66 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
                 className="w-full h-full object-cover cursor-zoom-in"
               />
               
-              {/* Holographic overlay */}
+              {/* Holographic overlay with enhanced shimmer */}
               <motion.div
                 className="absolute inset-0 pointer-events-none"
                 style={{
-                  background: 'linear-gradient(135deg, transparent 40%, hsl(270 95% 75% / 0.1) 50%, transparent 60%)',
+                  background: 'linear-gradient(135deg, transparent 30%, hsl(270 95% 75% / 0.15) 50%, transparent 70%)',
                   backgroundSize: '200% 200%',
                 }}
                 animate={{ backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'] }}
-                transition={{ duration: 5, repeat: Infinity }}
+                transition={{ duration: 4, repeat: Infinity }}
+              />
+              
+              {/* Pulsing glow border on hover */}
+              <motion.div
+                className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                style={{
+                  boxShadow: 'inset 0 0 30px hsl(270 95% 65% / 0.3)',
+                }}
+                animate={{
+                  boxShadow: [
+                    'inset 0 0 20px hsl(270 95% 65% / 0.2)',
+                    'inset 0 0 40px hsl(270 95% 65% / 0.4)',
+                    'inset 0 0 20px hsl(270 95% 65% / 0.2)',
+                  ],
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+
+              {/* Floating sparkles effect */}
+              <motion.div
+                className="absolute top-4 left-4 w-2 h-2 rounded-full bg-secondary"
+                animate={{
+                  y: [0, -10, 0],
+                  opacity: [0.5, 1, 0.5],
+                  scale: [1, 1.5, 1],
+                }}
+                transition={{ duration: 2, repeat: Infinity, delay: 0 }}
+                style={{ boxShadow: '0 0 10px hsl(35 100% 60%)' }}
+              />
+              <motion.div
+                className="absolute bottom-8 right-8 w-1.5 h-1.5 rounded-full bg-primary"
+                animate={{
+                  y: [0, -8, 0],
+                  opacity: [0.5, 1, 0.5],
+                  scale: [1, 1.3, 1],
+                }}
+                transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
+                style={{ boxShadow: '0 0 8px hsl(270 95% 65%)' }}
+              />
+              <motion.div
+                className="absolute top-1/3 right-6 w-1 h-1 rounded-full bg-foreground"
+                animate={{
+                  y: [0, -6, 0],
+                  opacity: [0.3, 0.8, 0.3],
+                }}
+                transition={{ duration: 3, repeat: Infinity, delay: 1 }}
               />
 
               {/* Expand icon */}
               <motion.div
-                className="absolute top-4 right-4 p-2 rounded-full bg-background/50 backdrop-blur-sm text-foreground opacity-0 group-hover:opacity-100"
+                className="absolute top-4 right-4 p-2 rounded-full bg-background/50 backdrop-blur-sm text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                 whileHover={{ scale: 1.1 }}
               >
                 <Maximize2 className="w-4 h-4" />

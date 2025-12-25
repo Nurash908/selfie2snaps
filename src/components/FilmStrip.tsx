@@ -226,6 +226,21 @@ const FilmStrip = ({ frames, onBless }: FilmStripProps) => {
                   }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
+                  {/* Pulsing glow border */}
+                  <motion.div
+                    className="absolute inset-0 rounded-lg pointer-events-none z-30"
+                    animate={{
+                      boxShadow: hoveredIndex === index
+                        ? [
+                            "inset 0 0 15px hsl(270 95% 65% / 0.3)",
+                            "inset 0 0 25px hsl(270 95% 65% / 0.5)",
+                            "inset 0 0 15px hsl(270 95% 65% / 0.3)",
+                          ]
+                        : "inset 0 0 0px transparent",
+                    }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+
                   {/* Holographic shimmer effect */}
                   <motion.div
                     className="absolute inset-0 pointer-events-none z-20"
@@ -238,6 +253,27 @@ const FilmStrip = ({ frames, onBless }: FilmStripProps) => {
                       backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"],
                     }}
                     transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  />
+
+                  {/* Floating sparkles */}
+                  <motion.div
+                    className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-secondary pointer-events-none z-20"
+                    animate={{
+                      y: [0, -5, 0],
+                      opacity: [0.4, 1, 0.4],
+                      scale: [1, 1.3, 1],
+                    }}
+                    transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
+                    style={{ boxShadow: "0 0 8px hsl(35 100% 60%)" }}
+                  />
+                  <motion.div
+                    className="absolute bottom-4 left-3 w-1 h-1 rounded-full bg-primary pointer-events-none z-20"
+                    animate={{
+                      y: [0, -4, 0],
+                      opacity: [0.3, 0.8, 0.3],
+                    }}
+                    transition={{ duration: 2.5, repeat: Infinity, delay: index * 0.3 + 0.5 }}
+                    style={{ boxShadow: "0 0 6px hsl(270 95% 65%)" }}
                   />
 
                   <img

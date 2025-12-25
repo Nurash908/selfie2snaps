@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, X, Check } from "lucide-react";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -8,13 +8,20 @@ interface PortraitCardProps {
   image: string | null;
   onImageUpload: (file: File) => void;
   onRemoveImage: () => void;
+  isProcessing?: boolean;
 }
 
-const PortraitCard = ({ label, image, onImageUpload, onRemoveImage }: PortraitCardProps) => {
+const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, isProcessing = false }: PortraitCardProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playSound } = useSoundEffects();
+
+  // Handle loading state when processing
+  useEffect(() => {
+    setIsLoading(isProcessing);
+  }, [isProcessing]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -94,7 +101,69 @@ const PortraitCard = ({ label, image, onImageUpload, onRemoveImage }: PortraitCa
         <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-primary/40" />
 
         <AnimatePresence mode="wait">
-          {image ? (
+          {/* Loading skeleton state */}
+          {isLoading && (
+            <motion.div
+              key="skeleton"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 overflow-hidden"
+            >
+              {/* Animated skeleton background */}
+              <div className="absolute inset-0" style={{ background: "hsl(250 25% 15%)" }}>
+                {/* Shimmer effect */}
+                <motion.div
+                  className="absolute inset-0"
+                  style={{
+                    background: "linear-gradient(90deg, transparent 0%, hsl(270 95% 65% / 0.1) 50%, transparent 100%)",
+                    backgroundSize: "200% 100%",
+                  }}
+                  animate={{
+                    backgroundPosition: ["200% 0", "-200% 0"],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                />
+              </div>
+              {/* Skeleton elements */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
+                <motion.div
+                  className="w-12 h-12 rounded-full"
+                  style={{ background: "hsl(250 20% 20%)" }}
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+                <motion.div
+                  className="w-20 h-3 rounded-full"
+                  style={{ background: "hsl(250 20% 20%)" }}
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+                />
+                <motion.div
+                  className="w-16 h-2 rounded-full"
+                  style={{ background: "hsl(250 20% 20%)" }}
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
+                />
+              </div>
+              {/* Scanning line effect */}
+              <motion.div
+                className="absolute left-0 right-0 h-1"
+                style={{
+                  background: "linear-gradient(90deg, transparent, hsl(270 95% 65% / 0.6), transparent)",
+                  boxShadow: "0 0 20px hsl(270 95% 65% / 0.5)",
+                }}
+                animate={{ y: [0, 200, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              />
+            </motion.div>
+          )}
+
+          {image && !isLoading ? (
             <motion.div
               key="image"
               initial={{ opacity: 0, scale: 0.8 }}
