@@ -18,6 +18,8 @@ import NarrativeCaption from "@/components/NarrativeCaption";
 import AuthModal from "@/components/AuthModal";
 import FavoritesSection from "@/components/FavoritesSection";
 import PreviewGallery from "@/components/PreviewGallery";
+import SuccessConfetti from "@/components/SuccessConfetti";
+import ParticleField from "@/components/ParticleField";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 
@@ -37,6 +39,7 @@ const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const { user, signOut } = useAuth();
   const { playSound } = useSoundEffects();
@@ -135,7 +138,14 @@ const Index = () => {
 
   const handleScratchComplete = () => {
     playSound("success");
-    setTimeout(() => setAppState("result"), 500);
+    setShowConfetti(true);
+    setTimeout(() => {
+      setAppState("result");
+    }, 500);
+  };
+
+  const handleConfettiComplete = () => {
+    setShowConfetti(false);
   };
 
   const handleReset = () => {
@@ -169,6 +179,12 @@ const Index = () => {
         background: "linear-gradient(180deg, hsl(250 30% 8%) 0%, hsl(250 25% 5%) 100%)",
       }}
     >
+      {/* Confetti effect on success */}
+      <SuccessConfetti trigger={showConfetti} onComplete={handleConfettiComplete} />
+
+      {/* Particle field for ambient effect */}
+      <ParticleField isActive={appState === "result"} intensity="medium" />
+
       {/* Ambient background effects */}
       <div className="fixed inset-0 pointer-events-none">
         <motion.div
