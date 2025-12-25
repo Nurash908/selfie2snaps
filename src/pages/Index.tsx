@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
-import { Sparkles, Wand2, RotateCcw, Zap } from "lucide-react";
+import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
+import { Sparkles, Wand2, RotateCcw, Zap, Heart, User as UserIcon, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import MeshBackground from "@/components/MeshBackground";
@@ -15,6 +15,12 @@ import ScratchReveal from "@/components/ScratchReveal";
 import DownloadBundle from "@/components/DownloadBundle";
 import NarrativeCaption from "@/components/NarrativeCaption";
 import MascotWave from "@/components/MascotWave";
+import AuthModal from "@/components/AuthModal";
+import ProgressIndicator from "@/components/ProgressIndicator";
+import FavoritesSection from "@/components/FavoritesSection";
+import PreviewGallery from "@/components/PreviewGallery";
+import { useAuth } from "@/hooks/useAuth";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 type AppState = "upload" | "configure" | "processing" | "scratch" | "result";
 
@@ -28,6 +34,14 @@ const Index = () => {
   const [generatedFrames, setGeneratedFrames] = useState<string[]>([]);
   const [narrative, setNarrative] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressStatus, setProgressStatus] = useState("");
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const { user, signOut } = useAuth();
+  const { playSound } = useSoundEffects();
 
   // Mouse tracking for interactive effects
   const mouseX = useMotionValue(0);
@@ -43,6 +57,26 @@ const Index = () => {
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [mouseX, mouseY]);
+
+  // Progress calculation
+  useEffect(() => {
+    if (!image1 && !image2) {
+      setProgress(0);
+      setProgressStatus("");
+    } else if (image1 && !image2) {
+      setProgress(40);
+      setProgressStatus("First portrait selected");
+    } else if (image1 && image2 && appState === "upload") {
+      setProgress(80);
+      setProgressStatus("Both portraits ready");
+    } else if (appState === "processing") {
+      setProgress(95);
+      setProgressStatus("Generating magic...");
+    } else if (appState === "result" || appState === "scratch") {
+      setProgress(100);
+      setProgressStatus("Complete!");
+    }
+  }, [image1, image2, appState]);
 
   const handleImageUpload = useCallback((file: File, sphereIndex: 1 | 2) => {
     const reader = new FileReader();
@@ -60,25 +94,21 @@ const Index = () => {
   const bothImagesUploaded = image1 && image2;
 
   const handleTransform = async () => {
+    playSound('generate');
     setAppState("processing");
     setIsGenerating(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-snap", {
-        body: {
-          image1,
-          image2,
-          vibe: selectedVibe,
-          aura: selectedAura,
-          frameCount,
-        },
+        body: { image1, image2, vibe: selectedVibe, aura: selectedAura, frameCount },
       });
 
       if (error) throw error;
 
+      playSound('complete');
       if (data?.frames) {
         setGeneratedFrames(data.frames);
-        setNarrative(data.narrative || "A beautiful moment of connection captured in time.");
+        setNarrative(data.narrative || "A beautiful moment captured in time.");
         setAppState("scratch");
       } else {
         const demoFrames = [
@@ -89,7 +119,7 @@ const Index = () => {
           "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=500&fit=crop",
         ];
         setGeneratedFrames(demoFrames.slice(0, frameCount));
-        setNarrative("A shared laugh between friends captured in time.");
+        setNarrative("A shared moment between friends captured in time.");
         setAppState("scratch");
       }
     } catch (error) {
@@ -103,7 +133,7 @@ const Index = () => {
         "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=500&fit=crop",
       ];
       setGeneratedFrames(demoFrames.slice(0, frameCount));
-      setNarrative("A shared laugh between friends captured in time.");
+      setNarrative("A shared moment between friends.");
       setAppState("scratch");
     } finally {
       setIsGenerating(false);
@@ -111,18 +141,22 @@ const Index = () => {
   };
 
   const handleScratchComplete = () => {
+    playSound('success');
     setTimeout(() => setAppState("result"), 500);
   };
 
   const handleReset = () => {
+    playSound('reset');
     setAppState("upload");
     setImage1(null);
     setImage2(null);
     setGeneratedFrames([]);
     setNarrative("");
+    setProgress(0);
   };
 
   const handleDownload = (type: string) => {
+    playSound('download');
     toast.success(`Downloading ${type}...`);
   };
 
@@ -131,253 +165,91 @@ const Index = () => {
       <MeshBackground />
       <MascotWave />
 
+      {/* Progress indicator */}
+      <AnimatePresence>
+        {progress > 0 && progress < 100 && (
+          <ProgressIndicator progress={progress} status={progressStatus} />
+        )}
+      </AnimatePresence>
+
+      {/* Auth & Favorites buttons */}
+      <div className="fixed top-4 right-4 z-40 flex gap-2">
+        {user && (
+          <motion.button
+            onClick={() => { playSound('click'); setShowFavorites(true); }}
+            className="p-3 rounded-full backdrop-blur-xl"
+            style={{ background: 'hsl(0 0% 10% / 0.8)', border: '1px solid hsl(0 0% 20%)' }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Heart className="w-5 h-5 text-secondary" />
+          </motion.button>
+        )}
+        <motion.button
+          onClick={() => {
+            playSound('click');
+            if (user) {
+              signOut();
+              toast.success('Signed out');
+            } else {
+              setShowAuthModal(true);
+            }
+          }}
+          className="p-3 rounded-full backdrop-blur-xl"
+          style={{ background: 'hsl(0 0% 10% / 0.8)', border: '1px solid hsl(0 0% 20%)' }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          {user ? <LogOut className="w-5 h-5 text-foreground" /> : <UserIcon className="w-5 h-5 text-foreground" />}
+        </motion.button>
+      </div>
+
       {/* Interactive cursor glow */}
       <motion.div
         className="fixed w-64 h-64 rounded-full pointer-events-none z-0"
         style={{
-          x: smoothMouseX,
-          y: smoothMouseY,
-          translateX: "-50%",
-          translateY: "-50%",
+          x: smoothMouseX, y: smoothMouseY, translateX: "-50%", translateY: "-50%",
           background: "radial-gradient(circle, hsl(270 95% 65% / 0.08), transparent 70%)",
           filter: "blur(40px)",
         }}
       />
 
       <div className="container max-w-6xl mx-auto px-4 py-8 md:py-16 relative z-10">
-        {/* Header with enhanced animations */}
-        <motion.header
-          className="text-center mb-12 md:mb-20"
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, type: "spring", stiffness: 100 }}
-        >
-          {/* Decorative top element */}
-          <motion.div
-            className="flex justify-center mb-6"
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3, type: "spring" }}
-          >
-            <motion.div
-              className="w-16 h-1 rounded-full"
-              style={{
-                background: "linear-gradient(90deg, transparent, hsl(270 95% 65%), hsl(35 100% 60%), transparent)",
-              }}
-              animate={{ scaleX: [0.5, 1, 0.5], opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 3, repeat: Infinity }}
-            />
-          </motion.div>
-
-          <motion.h1
-            className="text-5xl md:text-7xl lg:text-8xl font-serif font-bold mb-4 relative"
-            initial={{ filter: "blur(20px)", opacity: 0 }}
-            animate={{ filter: "blur(0px)", opacity: 1 }}
-            transition={{ duration: 1 }}
-          >
-            <motion.span
-              className="inline-block"
-              style={{
-                background: "linear-gradient(135deg, hsl(0 0% 85%), hsl(0 0% 100%), hsl(0 0% 75%))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                textShadow: "0 0 60px hsl(0 0% 100% / 0.2)",
-              }}
-              animate={{ y: [0, -5, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            >
-              Selfie
-            </motion.span>
-            <motion.span
-              className="inline-block mx-2"
-              style={{
-                background: "linear-gradient(135deg, hsl(270 95% 65%), hsl(300 80% 60%), hsl(35 100% 60%))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-              animate={{
-                rotate: [0, 10, -10, 0],
-                scale: [1, 1.15, 1],
-              }}
-              transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
-            >
-              2
-            </motion.span>
-            <motion.span
-              className="inline-block"
-              style={{
-                background: "linear-gradient(135deg, hsl(0 0% 85%), hsl(0 0% 100%), hsl(0 0% 75%))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-              animate={{ y: [0, -5, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-            >
-              Snap
-            </motion.span>
+        {/* Header */}
+        <motion.header className="text-center mb-12 md:mb-20" initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1 }}>
+          <motion.h1 className="text-5xl md:text-7xl lg:text-8xl font-serif font-bold mb-4">
+            <span style={{ background: "linear-gradient(135deg, hsl(0 0% 85%), hsl(0 0% 100%), hsl(0 0% 75%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Selfie</span>
+            <motion.span className="inline-block mx-2" style={{ background: "linear-gradient(135deg, hsl(270 95% 65%), hsl(300 80% 60%), hsl(35 100% 60%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }} animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.15, 1] }} transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}>2</motion.span>
+            <span style={{ background: "linear-gradient(135deg, hsl(0 0% 85%), hsl(0 0% 100%), hsl(0 0% 75%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Snap</span>
           </motion.h1>
-
-          <motion.p
-            className="text-sm md:text-base tracking-[0.3em] text-muted-foreground uppercase font-light"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            by{" "}
-            <span
-              className="font-medium"
-              style={{
-                background: "linear-gradient(90deg, hsl(270 95% 75%), hsl(35 100% 70%))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              Nurash Weerasinghe
-            </span>
+          <motion.p className="text-sm tracking-[0.3em] text-muted-foreground uppercase" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+            by <span style={{ background: "linear-gradient(90deg, hsl(270 95% 75%), hsl(35 100% 70%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Nurash Weerasinghe</span>
           </motion.p>
-
-          <motion.p
-            className="mt-6 text-lg md:text-xl text-foreground/60 max-w-lg mx-auto font-light leading-relaxed"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-          >
-            Transform two selfies into{" "}
-            <span className="text-foreground font-medium">beautiful AI-generated</span> art moments
+          <motion.p className="mt-6 text-lg text-foreground/60 max-w-lg mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
+            Upload two reference images, choose how many frames you need, and watch <span className="text-foreground font-medium">Nano Banana</span> transform them into charming selfie moments.
           </motion.p>
-
-          {/* Feature badges */}
-          <motion.div
-            className="flex flex-wrap justify-center gap-3 mt-8"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9 }}
-          >
-            {["No Sign Up", "Instant Results", "AI Powered"].map((badge, i) => (
-              <motion.div
-                key={badge}
-                className="px-4 py-1.5 rounded-full text-xs font-medium tracking-wide"
-                style={{
-                  background: "hsl(0 0% 10%)",
-                  border: "1px solid hsl(0 0% 20%)",
-                }}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1 + i * 0.1 }}
-                whileHover={{ scale: 1.05, borderColor: "hsl(270 95% 65%)" }}
-              >
-                <span className="text-muted-foreground">{badge}</span>
-              </motion.div>
-            ))}
-          </motion.div>
         </motion.header>
 
         {/* Main Content */}
         <AnimatePresence mode="wait">
           {(appState === "upload" || appState === "configure") && (
-            <motion.div
-              key="upload-section"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 0.95, y: -30 }}
-              transition={{ duration: 0.4 }}
-              className="space-y-14"
-            >
-              {/* Upload section with enhanced layout */}
-              <motion.div
-                className="relative flex flex-col md:flex-row items-center justify-center gap-8 md:gap-28"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <GlassSphere
-                  label="Person 1"
-                  image={image1}
-                  onImageUpload={(file) => handleImageUpload(file, 1)}
-                  isConnected={!!bothImagesUploaded}
-                  variant="left"
-                />
+            <motion.div key="upload-section" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="space-y-14">
+              <motion.div className="relative flex flex-col md:flex-row items-center justify-center gap-8 md:gap-28">
+                <GlassSphere label="Person 1" image={image1} onImageUpload={(file) => handleImageUpload(file, 1)} onRemoveImage={() => setImage1(null)} isConnected={!!bothImagesUploaded} variant="left" />
                 <ConnectionLine isConnected={!!bothImagesUploaded} />
-                <GlassSphere
-                  label="Person 2"
-                  image={image2}
-                  onImageUpload={(file) => handleImageUpload(file, 2)}
-                  isConnected={!!bothImagesUploaded}
-                  variant="right"
-                />
+                <GlassSphere label="Person 2" image={image2} onImageUpload={(file) => handleImageUpload(file, 2)} onRemoveImage={() => setImage2(null)} isConnected={!!bothImagesUploaded} variant="right" />
               </motion.div>
 
-              {/* Configuration panel */}
               <AnimatePresence>
                 {bothImagesUploaded && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.5, ease: "easeInOut" }}
-                    className="space-y-10 overflow-hidden"
-                  >
-                    {/* Section divider */}
-                    <motion.div
-                      className="flex items-center justify-center gap-4"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 }}
-                    >
-                      <div className="h-px w-20 bg-gradient-to-r from-transparent to-border" />
-                      <Zap className="w-4 h-4 text-muted-foreground" />
-                      <div className="h-px w-20 bg-gradient-to-l from-transparent to-border" />
-                    </motion.div>
-
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-10 overflow-hidden">
+                    <motion.div className="flex items-center justify-center gap-4"><div className="h-px w-20 bg-gradient-to-r from-transparent to-border" /><Zap className="w-4 h-4 text-muted-foreground" /><div className="h-px w-20 bg-gradient-to-l from-transparent to-border" /></motion.div>
                     <MagicSlider value={frameCount} onChange={setFrameCount} min={1} max={10} />
                     <VibeSelector selected={selectedVibe} onSelect={setSelectedVibe} />
                     <AuraFilters selected={selectedAura} onSelect={setSelectedAura} />
-
-                    {/* Transform button */}
-                    <motion.div
-                      className="flex justify-center pt-6"
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.2 }}
-                    >
-                      <motion.button
-                        onClick={handleTransform}
-                        disabled={isGenerating}
-                        className="group relative px-12 py-5 rounded-2xl font-semibold text-lg tracking-wide overflow-hidden"
-                        style={{
-                          background: "linear-gradient(135deg, hsl(270 95% 55%), hsl(300 80% 50%), hsl(35 100% 55%))",
-                          backgroundSize: "200% 200%",
-                        }}
-                        whileHover={{ scale: 1.05, boxShadow: "0 20px 50px hsl(270 95% 65% / 0.4)" }}
-                        whileTap={{ scale: 0.98 }}
-                        animate={{ backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"] }}
-                        transition={{ backgroundPosition: { duration: 4, repeat: Infinity } }}
-                      >
-                        {/* Button shine effect */}
-                        <motion.div
-                          className="absolute inset-0"
-                          style={{
-                            background: "linear-gradient(105deg, transparent 40%, hsl(0 0% 100% / 0.2) 45%, hsl(0 0% 100% / 0.3) 50%, hsl(0 0% 100% / 0.2) 55%, transparent 60%)",
-                          }}
-                          animate={{ x: ["-100%", "100%"] }}
-                          transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
-                        />
-
-                        <span className="relative z-10 flex items-center gap-3 text-foreground">
-                          <motion.div
-                            animate={{ rotate: [0, 15, -15, 0] }}
-                            transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
-                          >
-                            <Wand2 className="w-5 h-5" />
-                          </motion.div>
-                          Create Magic
-                          <motion.div
-                            animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                          >
-                            <Sparkles className="w-5 h-5" />
-                          </motion.div>
-                        </span>
+                    <motion.div className="flex justify-center pt-6">
+                      <motion.button onClick={handleTransform} disabled={isGenerating} className="group relative px-12 py-5 rounded-2xl font-semibold text-lg overflow-hidden" style={{ background: "linear-gradient(135deg, hsl(270 95% 55%), hsl(300 80% 50%), hsl(35 100% 55%))", backgroundSize: "200% 200%" }} whileHover={{ scale: 1.05, boxShadow: "0 20px 50px hsl(270 95% 65% / 0.4)" }} whileTap={{ scale: 0.98 }}>
+                        <span className="relative z-10 flex items-center gap-3 text-foreground"><Wand2 className="w-5 h-5" />Generate SelfiSnaps<Sparkles className="w-5 h-5" /></span>
                       </motion.button>
                     </motion.div>
                   </motion.div>
@@ -387,73 +259,31 @@ const Index = () => {
           )}
 
           {appState === "processing" && (
-            <motion.div
-              key="processing"
-              className="flex flex-col items-center justify-center min-h-[60vh]"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.1 }}
-            >
+            <motion.div key="processing" className="flex flex-col items-center justify-center min-h-[60vh]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <NeuralConstellation />
             </motion.div>
           )}
 
           {appState === "scratch" && generatedFrames.length > 0 && (
-            <motion.div
-              key="scratch"
-              className="flex flex-col items-center"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <motion.p
-                className="text-lg text-muted-foreground mb-8 text-center"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                ✨ Your snaps are ready!{" "}
-                <span className="text-foreground font-medium">Scratch to reveal...</span>
-              </motion.p>
+            <motion.div key="scratch" className="flex flex-col items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.p className="text-lg text-muted-foreground mb-8 text-center">✨ Your snaps are ready! <span className="text-foreground font-medium">Scratch to reveal...</span></motion.p>
               <ScratchReveal revealImage={generatedFrames[0]} onRevealComplete={handleScratchComplete} />
             </motion.div>
           )}
 
           {appState === "result" && (
-            <motion.div
-              key="result"
-              className="space-y-12"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
+            <motion.div key="result" className="space-y-12" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <NarrativeCaption caption={narrative} />
               <FilmStrip frames={generatedFrames} onBless={() => toast.success("Blessings sent! 💛")} />
+              <div className="flex justify-center gap-4">
+                <motion.button onClick={() => { playSound('preview'); setShowPreview(true); }} className="px-6 py-3 rounded-xl font-medium flex items-center gap-2" style={{ background: "linear-gradient(135deg, hsl(270 95% 55%), hsl(35 100% 55%))" }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Sparkles className="w-4 h-4" />Preview All
+                </motion.button>
+              </div>
               <DownloadBundle frames={generatedFrames} onDownload={handleDownload} />
-
-              <motion.div
-                className="flex justify-center pt-8"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-              >
-                <motion.button
-                  onClick={handleReset}
-                  className="flex items-center gap-3 px-8 py-4 rounded-2xl font-medium text-muted-foreground border border-border hover:border-primary/50 hover:text-foreground transition-all duration-300 group"
-                  style={{
-                    background: "hsl(0 0% 8%)",
-                  }}
-                  whileHover={{
-                    scale: 1.02,
-                    boxShadow: "0 10px 30px hsl(0 0% 0% / 0.3)",
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <motion.div
-                    className="group-hover:rotate-[-360deg] transition-transform duration-500"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </motion.div>
-                  Create Another Snap
+              <motion.div className="flex justify-center pt-8">
+                <motion.button onClick={handleReset} className="flex items-center gap-3 px-8 py-4 rounded-2xl font-medium text-muted-foreground border border-border hover:text-foreground" style={{ background: "hsl(0 0% 8%)" }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <RotateCcw className="w-4 h-4" />Reset Workspace
                 </motion.button>
               </motion.div>
             </motion.div>
@@ -461,41 +291,21 @@ const Index = () => {
         </AnimatePresence>
 
         {/* Footer */}
-        <motion.footer
-          className="mt-24 text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2 }}
-        >
-          <motion.div
-            className="inline-flex items-center gap-3 px-6 py-3 rounded-full"
-            style={{
-              background: "hsl(0 0% 8%)",
-              border: "1px solid hsl(0 0% 15%)",
-            }}
-            whileHover={{ borderColor: "hsl(0 0% 25%)" }}
-          >
+        <motion.footer className="mt-24 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2 }}>
+          <motion.div className="inline-flex items-center gap-3 px-6 py-3 rounded-full" style={{ background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 15%)" }}>
             <span className="text-sm text-muted-foreground">Powered by</span>
-            <span
-              className="text-sm font-semibold"
-              style={{
-                background: "linear-gradient(90deg, hsl(48 100% 60%), hsl(35 100% 55%))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              Nano Banana AI
-            </span>
-            <motion.span
-              className="text-xl"
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-            >
-              🍌
-            </motion.span>
+            <span className="text-sm font-semibold" style={{ background: "linear-gradient(90deg, hsl(48 100% 60%), hsl(35 100% 55%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Nano Banana AI</span>
+            <span className="text-xl">🍌</span>
           </motion.div>
         </motion.footer>
       </div>
+
+      {/* Modals */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <FavoritesSection isOpen={showFavorites} onClose={() => setShowFavorites(false)} />
+      <AnimatePresence>
+        {showPreview && <PreviewGallery frames={generatedFrames} vibe={selectedVibe} onClose={() => setShowPreview(false)} onOpenAuth={() => setShowAuthModal(true)} />}
+      </AnimatePresence>
     </div>
   );
 };
