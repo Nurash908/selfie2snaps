@@ -9,13 +9,12 @@ import PortraitCard from "@/components/PortraitCard";
 import FramesControl from "@/components/FramesControl";
 import RatioSelector from "@/components/RatioSelector";
 import SceneSelector from "@/components/SceneSelector";
-
+import PositionSwapToggle from "@/components/PositionSwapToggle";
 import GenerateButton from "@/components/GenerateButton";
 import FeatureCards from "@/components/FeatureCards";
 import NeuralConstellation from "@/components/NeuralConstellation";
 import FilmStrip from "@/components/FilmStrip";
 import ScratchReveal from "@/components/ScratchReveal";
-import DownloadBundle from "@/components/DownloadBundle";
 import NarrativeCaption from "@/components/NarrativeCaption";
 import AuthModal from "@/components/AuthModal";
 import FavoritesSection from "@/components/FavoritesSection";
@@ -25,6 +24,9 @@ import ParticleField from "@/components/ParticleField";
 import TutorialOverlay from "@/components/TutorialOverlay";
 import ImageCropper from "@/components/ImageCropper";
 import PoseSuggestion from "@/components/PoseSuggestion";
+import FloatingOrbs from "@/components/FloatingOrbs";
+import HolographicCard from "@/components/HolographicCard";
+import GlowingBorder from "@/components/GlowingBorder";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -38,6 +40,7 @@ const Index = () => {
   const [frameCount, setFrameCount] = useState(1);
   const [selectedRatio, setSelectedRatio] = useState("16:9");
   const [selectedScene, setSelectedScene] = useState("natural");
+  const [swapPositions, setSwapPositions] = useState(false);
   const [generatedFrames, setGeneratedFrames] = useState<string[]>([]);
   const [narrative, setNarrative] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -131,7 +134,7 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-snap", {
-        body: { image1, image2, ratio: selectedRatio, frameCount, scene: selectedScene },
+        body: { image1, image2, ratio: selectedRatio, frameCount, scene: selectedScene, swapPositions },
       });
 
       if (error) throw error;
@@ -200,10 +203,6 @@ const Index = () => {
     }
   };
 
-  const handleDownload = (type: string) => {
-    playSound("download");
-    toast.success(`Downloading ${type}...`);
-  };
 
   const bothImagesUploaded = image1 && image2;
 
@@ -216,6 +215,9 @@ const Index = () => {
     >
       {/* Confetti effect on success */}
       <SuccessConfetti trigger={showConfetti} onComplete={handleConfettiComplete} />
+
+      {/* Floating orbs background */}
+      <FloatingOrbs intensity="medium" />
 
       {/* Particle field for ambient effect */}
       <ParticleField isActive={appState === "result"} intensity="medium" />
@@ -305,52 +307,142 @@ const Index = () => {
       </div>
 
       <div className="container max-w-md mx-auto px-4 py-8 md:py-12 relative z-10">
-        {/* Header */}
+        {/* Header with 3D Effects */}
         <motion.header
-          className="text-center mb-8"
+          className="text-center mb-8 relative"
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
+          {/* Floating decorative elements */}
+          <motion.div
+            className="absolute -top-4 left-1/4 w-2 h-2 rounded-full bg-primary"
+            animate={{
+              y: [0, -15, 0],
+              opacity: [0.4, 1, 0.4],
+              scale: [1, 1.3, 1],
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            style={{ boxShadow: "0 0 15px hsl(270 95% 65%)" }}
+          />
+          <motion.div
+            className="absolute top-8 right-1/4 w-1.5 h-1.5 rounded-full bg-secondary"
+            animate={{
+              y: [0, -10, 0],
+              opacity: [0.3, 0.8, 0.3],
+            }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+            style={{ boxShadow: "0 0 12px hsl(35 100% 60%)" }}
+          />
+          <motion.div
+            className="absolute -top-2 right-1/3 w-1 h-1 rounded-full bg-foreground/60"
+            animate={{
+              y: [0, -8, 0],
+              x: [0, 5, 0],
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          />
+
           <BananaLogo />
 
           <motion.h1
-            className="text-4xl md:text-5xl font-serif font-bold mb-3 flex items-center justify-center gap-2"
+            className="text-4xl md:text-5xl font-serif font-bold mb-3 flex items-center justify-center gap-2 relative"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
+            style={{ perspective: "1000px" }}
           >
-            <span className="text-metallic">Selfie</span>
+            <motion.span 
+              className="text-metallic relative"
+              animate={{ 
+                textShadow: [
+                  "0 0 20px hsl(270 95% 65% / 0.3)",
+                  "0 0 40px hsl(270 95% 65% / 0.5)",
+                  "0 0 20px hsl(270 95% 65% / 0.3)",
+                ]
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+              whileHover={{ scale: 1.05, rotateY: 5 }}
+            >
+              Selfie
+            </motion.span>
             <motion.span
-              className="inline-flex items-center justify-center w-10 h-10 rounded-lg text-2xl font-mono"
+              className="inline-flex items-center justify-center w-12 h-12 rounded-xl text-2xl font-mono relative"
               style={{
                 background: "linear-gradient(135deg, hsl(270 95% 55%), hsl(300 80% 50%))",
+                boxShadow: "0 8px 32px hsl(270 95% 55% / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.2)",
               }}
-              animate={{ rotate: [0, 5, -5, 0] }}
+              animate={{ 
+                rotate: [0, 5, -5, 0],
+                scale: [1, 1.05, 1],
+              }}
               transition={{ duration: 4, repeat: Infinity }}
+              whileHover={{ 
+                scale: 1.2, 
+                rotate: 15,
+                boxShadow: "0 12px 40px hsl(270 95% 55% / 0.6)",
+              }}
             >
               2
+              {/* Inner glow effect */}
+              <motion.div
+                className="absolute inset-0 rounded-xl"
+                style={{
+                  background: "linear-gradient(135deg, hsl(0 0% 100% / 0.2), transparent)",
+                }}
+              />
             </motion.span>
-            <span className="text-metallic">Snap</span>
+            <motion.span 
+              className="text-metallic"
+              animate={{ 
+                textShadow: [
+                  "0 0 20px hsl(35 100% 60% / 0.3)",
+                  "0 0 40px hsl(35 100% 60% / 0.5)",
+                  "0 0 20px hsl(35 100% 60% / 0.3)",
+                ]
+              }}
+              transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
+              whileHover={{ scale: 1.05, rotateY: -5 }}
+            >
+              Snap
+            </motion.span>
           </motion.h1>
 
           <motion.p
             className="text-xs font-mono tracking-[0.3em] text-muted-foreground uppercase mb-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            Created by Nurash Weerasinghe
+            <motion.span
+              animate={{ opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              Created by Nurash Weerasinghe
+            </motion.span>
           </motion.p>
 
           <motion.p
-            className="text-sm text-muted-foreground leading-relaxed"
+            className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
           >
             Fuse two realities into one perfect cinematic moment using{" "}
-            <span className="text-secondary font-medium">Nano Banana's</span> neural engine.
+            <motion.span 
+              className="text-secondary font-medium"
+              animate={{ 
+                textShadow: [
+                  "0 0 8px hsl(35 100% 60% / 0)",
+                  "0 0 12px hsl(35 100% 60% / 0.5)",
+                  "0 0 8px hsl(35 100% 60% / 0)",
+                ]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              Nano Banana's
+            </motion.span>{" "}
+            neural engine.
           </motion.p>
         </motion.header>
 
@@ -367,34 +459,115 @@ const Index = () => {
               {/* System Status */}
               <SystemStatusPanel progress={progress} status={progressStatus} />
 
-              {/* Portrait Cards */}
-              <motion.div
-                className="p-5 rounded-2xl"
-                style={{
-                  background: "linear-gradient(180deg, hsl(250 30% 12%) 0%, hsl(250 25% 8%) 100%)",
-                  border: "1px solid hsl(250 30% 20%)",
-                }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <div className="flex justify-center gap-6">
-                  <PortraitCard
-                    label="Portrait 1"
-                    image={image1}
-                    onImageUpload={(file) => handleImageUpload(file, 1)}
-                    onRemoveImage={() => setImage1(null)}
-                    onCropRequest={() => handleCropRequest(1)}
+              {/* Portrait Cards with 3D perspective */}
+              <GlowingBorder colors={["hsl(270 95% 65%)", "hsl(35 100% 60%)", "hsl(300 80% 60%)"]} speed={4}>
+                <motion.div
+                  className="p-6 rounded-2xl relative overflow-hidden"
+                  style={{
+                    background: "linear-gradient(180deg, hsl(250 30% 12%) 0%, hsl(250 25% 8%) 100%)",
+                  }}
+                  initial={{ opacity: 0, y: 20, rotateX: -10 }}
+                  animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 100 }}
+                >
+                  {/* Decorative corner elements */}
+                  <motion.div
+                    className="absolute top-3 left-3 w-8 h-8"
+                    style={{
+                      borderLeft: "2px solid hsl(270 95% 65% / 0.4)",
+                      borderTop: "2px solid hsl(270 95% 65% / 0.4)",
+                    }}
+                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 2, repeat: Infinity }}
                   />
-                  <PortraitCard
-                    label="Portrait 2"
-                    image={image2}
-                    onImageUpload={(file) => handleImageUpload(file, 2)}
-                    onRemoveImage={() => setImage2(null)}
-                    onCropRequest={() => handleCropRequest(2)}
+                  <motion.div
+                    className="absolute top-3 right-3 w-8 h-8"
+                    style={{
+                      borderRight: "2px solid hsl(35 100% 60% / 0.4)",
+                      borderTop: "2px solid hsl(35 100% 60% / 0.4)",
+                    }}
+                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
                   />
-                </div>
-              </motion.div>
+                  <motion.div
+                    className="absolute bottom-3 left-3 w-8 h-8"
+                    style={{
+                      borderLeft: "2px solid hsl(35 100% 60% / 0.4)",
+                      borderBottom: "2px solid hsl(35 100% 60% / 0.4)",
+                    }}
+                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+                  />
+                  <motion.div
+                    className="absolute bottom-3 right-3 w-8 h-8"
+                    style={{
+                      borderRight: "2px solid hsl(270 95% 65% / 0.4)",
+                      borderBottom: "2px solid hsl(270 95% 65% / 0.4)",
+                    }}
+                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
+                  />
+
+                  {/* Scanning line effect */}
+                  <motion.div
+                    className="absolute left-0 right-0 h-[2px] pointer-events-none"
+                    style={{
+                      background: "linear-gradient(90deg, transparent, hsl(270 95% 65% / 0.5), transparent)",
+                      boxShadow: "0 0 10px hsl(270 95% 65% / 0.3)",
+                    }}
+                    animate={{ y: [0, 300, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  />
+
+                  <div className="flex justify-center gap-6 relative z-10">
+                    <motion.div
+                      whileHover={{ scale: 1.02, rotateY: 5 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                      style={{ perspective: "1000px" }}
+                    >
+                      <PortraitCard
+                        label={swapPositions ? "Portrait 2" : "Portrait 1"}
+                        image={swapPositions ? image2 : image1}
+                        onImageUpload={(file) => handleImageUpload(file, swapPositions ? 2 : 1)}
+                        onRemoveImage={() => swapPositions ? setImage2(null) : setImage1(null)}
+                        onCropRequest={() => handleCropRequest(swapPositions ? 2 : 1)}
+                      />
+                    </motion.div>
+                    
+                    {/* Connection indicator */}
+                    <motion.div
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0"
+                      animate={bothImagesUploaded ? {
+                        scale: [1, 1.5, 1],
+                        opacity: [0.3, 0.8, 0.3],
+                      } : { opacity: 0 }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <div 
+                        className="w-16 h-16 rounded-full"
+                        style={{
+                          background: "radial-gradient(circle, hsl(270 95% 65% / 0.3), transparent)",
+                          filter: "blur(10px)",
+                        }}
+                      />
+                    </motion.div>
+                    
+                    <motion.div
+                      whileHover={{ scale: 1.02, rotateY: -5 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                      style={{ perspective: "1000px" }}
+                    >
+                      <PortraitCard
+                        label={swapPositions ? "Portrait 1" : "Portrait 2"}
+                        image={swapPositions ? image1 : image2}
+                        onImageUpload={(file) => handleImageUpload(file, swapPositions ? 1 : 2)}
+                        onRemoveImage={() => swapPositions ? setImage1(null) : setImage2(null)}
+                        onCropRequest={() => handleCropRequest(swapPositions ? 1 : 2)}
+                      />
+                    </motion.div>
+                  </div>
+                </motion.div>
+              </GlowingBorder>
 
               {/* Pose Suggestion Tips */}
               <PoseSuggestion />
@@ -408,30 +581,32 @@ const Index = () => {
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-6 overflow-hidden"
                   >
-                    <div
-                      className="p-5 rounded-2xl space-y-6"
-                      style={{
-                        background: "linear-gradient(180deg, hsl(250 30% 12%) 0%, hsl(250 25% 8%) 100%)",
-                        border: "1px solid hsl(250 30% 20%)",
-                      }}
-                    >
-                      <SceneSelector selected={selectedScene} onSelect={setSelectedScene} />
-                      <FramesControl
-                        value={frameCount}
-                        onChange={setFrameCount}
-                        min={1}
-                        max={2}
-                      />
-                      <RatioSelector selected={selectedRatio} onSelect={setSelectedRatio} />
-                    </div>
+                    <HolographicCard>
+                      <div className="p-5 space-y-6">
+                        <SceneSelector selected={selectedScene} onSelect={setSelectedScene} />
+                        <PositionSwapToggle 
+                          isSwapped={swapPositions} 
+                          onToggle={() => setSwapPositions(!swapPositions)} 
+                        />
+                        <FramesControl
+                          value={frameCount}
+                          onChange={setFrameCount}
+                          min={1}
+                          max={2}
+                        />
+                        <RatioSelector selected={selectedRatio} onSelect={setSelectedRatio} />
+                      </div>
+                    </HolographicCard>
 
-                    <GenerateButton
-                      onGenerate={handleTransform}
-                      onAddFrame={handleAddFrame}
-                      onReset={handleReset}
-                      isGenerating={isGenerating}
-                      disabled={!bothImagesUploaded}
-                    />
+                    <GlowingBorder>
+                      <GenerateButton
+                        onGenerate={handleTransform}
+                        onAddFrame={handleAddFrame}
+                        onReset={handleReset}
+                        isGenerating={isGenerating}
+                        disabled={!bothImagesUploaded}
+                      />
+                    </GlowingBorder>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -499,7 +674,7 @@ const Index = () => {
                   Preview All
                 </motion.button>
               </div>
-              <DownloadBundle frames={generatedFrames} onDownload={handleDownload} />
+              
               <GenerateButton
                 onGenerate={handleTransform}
                 onReset={handleReset}
