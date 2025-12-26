@@ -24,6 +24,7 @@ import SuccessConfetti from "@/components/SuccessConfetti";
 import ParticleField from "@/components/ParticleField";
 import TutorialOverlay from "@/components/TutorialOverlay";
 import ImageCropper from "@/components/ImageCropper";
+import PoseSuggestion from "@/components/PoseSuggestion";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -394,6 +395,9 @@ const Index = () => {
                   />
                 </div>
               </motion.div>
+
+              {/* Pose Suggestion Tips */}
+              <PoseSuggestion />
 
               {/* Controls */}
               <AnimatePresence>
