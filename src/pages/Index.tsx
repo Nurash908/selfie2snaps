@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
-import { Heart, User as UserIcon, LogOut } from "lucide-react";
+import { Heart, User as UserIcon, LogOut, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import BananaLogo from "@/components/BananaLogo";
@@ -18,6 +18,7 @@ import ScratchReveal from "@/components/ScratchReveal";
 import NarrativeCaption from "@/components/NarrativeCaption";
 import AuthModal from "@/components/AuthModal";
 import FavoritesSection from "@/components/FavoritesSection";
+import HistorySection from "@/components/HistorySection";
 import PreviewGallery from "@/components/PreviewGallery";
 import SuccessConfetti from "@/components/SuccessConfetti";
 import ParticleField from "@/components/ParticleField";
@@ -53,6 +54,7 @@ const Index = () => {
   const [progressStatus, setProgressStatus] = useState("System Ready");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -141,6 +143,27 @@ const Index = () => {
     }
   }, [cropImage]);
 
+  // Function to save generated frames to history
+  const saveToHistory = async (frames: string[], captionText: string) => {
+    if (!user) return;
+    
+    try {
+      // Save each frame to history
+      for (const imageUrl of frames) {
+        await supabase.from('generation_history').insert({
+          user_id: user.id,
+          image_url: imageUrl,
+          style: selectedStyle,
+          scene: selectedScene,
+          ratio: selectedRatio,
+          narrative: captionText,
+        });
+      }
+    } catch (error) {
+      console.error('Error saving to history:', error);
+    }
+  };
+
   const handleTransform = async () => {
     // Require authentication to generate
     if (!user) {
@@ -164,7 +187,10 @@ const Index = () => {
       playSound("complete");
       if (data?.frames && data.frames.length > 0) {
         setGeneratedFrames(data.frames);
-        setNarrative(data.narrative || "A beautiful moment captured in time.");
+        const narrativeText = data.narrative || "A beautiful moment captured in time.";
+        setNarrative(narrativeText);
+        // Save to history
+        await saveToHistory(data.frames, narrativeText);
         setAppState("scratch");
       } else {
         // Generate demo frames based on frameCount
@@ -176,7 +202,10 @@ const Index = () => {
           return images[i % images.length] + `&seed=${Date.now()}-${i}`;
         });
         setGeneratedFrames(demoFrames);
-        setNarrative("A shared moment between friends captured in time.");
+        const demoNarrative = "A shared moment between friends captured in time.";
+        setNarrative(demoNarrative);
+        // Save demo frames to history too
+        await saveToHistory(demoFrames, demoNarrative);
         setAppState("scratch");
       }
     } catch (error) {
@@ -191,7 +220,10 @@ const Index = () => {
         return images[i % images.length] + `&seed=${Date.now()}-${i}`;
       });
       setGeneratedFrames(demoFrames);
-      setNarrative("A shared moment between friends.");
+      const demoNarrative = "A shared moment between friends.";
+      setNarrative(demoNarrative);
+      // Save demo frames to history
+      await saveToHistory(demoFrames, demoNarrative);
       setAppState("scratch");
     } finally {
       setIsGenerating(false);
@@ -291,21 +323,43 @@ const Index = () => {
         }}
       />
 
-      {/* Auth & Favorites buttons */}
+      {/* Auth, History & Favorites buttons */}
       <div className="fixed top-4 right-4 z-40 flex gap-2">
         {user && (
-          <motion.button
-            onClick={() => {
-              playSound("click");
-              setShowFavorites(true);
-            }}
-            className="p-3 rounded-full backdrop-blur-xl border border-border/30"
-            style={{ background: "hsl(250 25% 12% / 0.8)" }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Heart className="w-5 h-5 text-primary" />
-          </motion.button>
+          <>
+            <motion.button
+              onClick={() => {
+                playSound("click");
+                setShowHistory(true);
+              }}
+              className="p-3 rounded-full backdrop-blur-xl border border-border/30 relative overflow-hidden group"
+              style={{ background: "hsl(250 25% 12% / 0.8)" }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <motion.div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                style={{ background: "radial-gradient(circle, hsl(200 90% 55% / 0.2), transparent)" }}
+              />
+              <History className="w-5 h-5 text-blue-400" />
+            </motion.button>
+            <motion.button
+              onClick={() => {
+                playSound("click");
+                setShowFavorites(true);
+              }}
+              className="p-3 rounded-full backdrop-blur-xl border border-border/30 relative overflow-hidden group"
+              style={{ background: "hsl(250 25% 12% / 0.8)" }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <motion.div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                style={{ background: "radial-gradient(circle, hsl(270 95% 65% / 0.2), transparent)" }}
+              />
+              <Heart className="w-5 h-5 text-primary" />
+            </motion.button>
+          </>
         )}
         <motion.button
           onClick={() => {
@@ -770,6 +824,7 @@ const Index = () => {
       {/* Modals */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
       <FavoritesSection isOpen={showFavorites} onClose={() => setShowFavorites(false)} />
+      <HistorySection isOpen={showHistory} onClose={() => setShowHistory(false)} />
       <AnimatePresence>
         {showPreview && (
           <PreviewGallery

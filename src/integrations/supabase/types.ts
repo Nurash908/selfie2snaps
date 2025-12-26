@@ -47,6 +47,42 @@ export type Database = {
         }
         Relationships: []
       }
+      generation_history: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          narrative: string | null
+          ratio: string | null
+          scene: string | null
+          style: string | null
+          thumbnail_url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          narrative?: string | null
+          ratio?: string | null
+          scene?: string | null
+          style?: string | null
+          thumbnail_url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          narrative?: string | null
+          ratio?: string | null
+          scene?: string | null
+          style?: string | null
+          thumbnail_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

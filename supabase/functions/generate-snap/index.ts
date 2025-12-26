@@ -39,7 +39,12 @@ serve(async (req) => {
       vintage: "Vintage film look with warm sepia tones, slight grain, faded colors, nostalgic 70s/80s aesthetic",
       cinematic: "Cinematic movie-like look with dramatic lighting, deep shadows, desaturated colors with teal and orange color grading",
       vibrant: "Bold and vibrant colors, high saturation, punchy contrast, vivid and eye-catching",
-      neon: "Cyberpunk neon aesthetic with glowing colors, purple and cyan lighting, futuristic atmosphere"
+      neon: "Cyberpunk neon aesthetic with glowing colors, purple and cyan lighting, futuristic atmosphere",
+      bw: "Classic black and white photography, high contrast, dramatic shadows, timeless monochrome look with rich grayscale tones",
+      sepia: "Warm sepia-toned photograph with brownish vintage coloring, reminiscent of old antique photographs from the early 1900s",
+      hdr: "High Dynamic Range look with enhanced details in shadows and highlights, vibrant colors, hyper-realistic clarity and sharpness",
+      dreamy: "Soft, ethereal dreamy look with gentle pastel colors, soft focus bloom effect, romantic and whimsical atmosphere",
+      warm: "Warm golden hour lighting with rich amber and orange tones, cozy sunset vibes, flattering warm skin tones"
     };
 
     const styleDescription = styleDescriptions[style] || styleDescriptions.natural;
