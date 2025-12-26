@@ -8,7 +8,7 @@ import SystemStatusPanel from "@/components/SystemStatusPanel";
 import PortraitCard from "@/components/PortraitCard";
 import FramesControl from "@/components/FramesControl";
 import RatioSelector from "@/components/RatioSelector";
-import VibeSelector from "@/components/VibeSelector";
+
 import GenerateButton from "@/components/GenerateButton";
 import FeatureCards from "@/components/FeatureCards";
 import NeuralConstellation from "@/components/NeuralConstellation";
@@ -33,9 +33,8 @@ const Index = () => {
   const [appState, setAppState] = useState<AppState>("upload");
   const [image1, setImage1] = useState<string | null>(null);
   const [image2, setImage2] = useState<string | null>(null);
-  const [frameCount, setFrameCount] = useState(2);
-  const [selectedRatio, setSelectedRatio] = useState("3:4");
-  const [selectedVibe, setSelectedVibe] = useState("renaissance");
+  const [frameCount, setFrameCount] = useState(1);
+  const [selectedRatio, setSelectedRatio] = useState("16:9");
   const [generatedFrames, setGeneratedFrames] = useState<string[]>([]);
   const [narrative, setNarrative] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -129,7 +128,7 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-snap", {
-        body: { image1, image2, ratio: selectedRatio, vibe: selectedVibe, frameCount },
+        body: { image1, image2, ratio: selectedRatio, frameCount },
       });
 
       if (error) throw error;
@@ -193,7 +192,7 @@ const Index = () => {
   };
 
   const handleAddFrame = () => {
-    if (frameCount < 4) {
+    if (frameCount < 2) {
       setFrameCount(frameCount + 1);
     }
   };
@@ -410,14 +409,13 @@ const Index = () => {
                         border: "1px solid hsl(250 30% 20%)",
                       }}
                     >
-                      <FramesControl
+                    <FramesControl
                         value={frameCount}
                         onChange={setFrameCount}
                         min={1}
-                        max={4}
+                        max={2}
                       />
                       <RatioSelector selected={selectedRatio} onSelect={setSelectedRatio} />
-                      <VibeSelector selected={selectedVibe} onSelect={setSelectedVibe} />
                     </div>
 
                     <GenerateButton
