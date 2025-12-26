@@ -107,14 +107,23 @@ const Index = () => {
   }, [image1, image2, appState]);
 
   const handleImageUpload = useCallback((file: File, index: 1 | 2) => {
+    // Require authentication to upload
+    if (!user) {
+      playSound("click");
+      toast.error("Please sign in to upload images");
+      setShowAuthModal(true);
+      return;
+    }
+    
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
       if (index === 1) setImage1(result);
       else setImage2(result);
+      playSound("upload");
     };
     reader.readAsDataURL(file);
-  }, []);
+  }, [user, playSound]);
 
   const handleCropRequest = useCallback((index: 1 | 2) => {
     const image = index === 1 ? image1 : image2;
@@ -133,6 +142,14 @@ const Index = () => {
   }, [cropImage]);
 
   const handleTransform = async () => {
+    // Require authentication to generate
+    if (!user) {
+      playSound("click");
+      toast.error("Please sign in to generate snaps");
+      setShowAuthModal(true);
+      return;
+    }
+    
     playSound("generate");
     setAppState("processing");
     setIsGenerating(true);
@@ -145,33 +162,35 @@ const Index = () => {
       if (error) throw error;
 
       playSound("complete");
-      if (data?.frames) {
+      if (data?.frames && data.frames.length > 0) {
         setGeneratedFrames(data.frames);
         setNarrative(data.narrative || "A beautiful moment captured in time.");
         setAppState("scratch");
       } else {
-        const demoFrames = [
-          "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=500&fit=crop",
-          "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=500&fit=crop",
-          "https://images.unsplash.com/photo-1522529599102-193c0d76b5b6?w=400&h=500&fit=crop",
-          "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=500&fit=crop",
-          "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=500&fit=crop",
-        ];
-        setGeneratedFrames(demoFrames.slice(0, frameCount));
+        // Generate demo frames based on frameCount
+        const demoFrames = Array.from({ length: frameCount }, (_, i) => {
+          const images = [
+            "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=500&fit=crop",
+          ];
+          return images[i % images.length] + `&seed=${Date.now()}-${i}`;
+        });
+        setGeneratedFrames(demoFrames);
         setNarrative("A shared moment between friends captured in time.");
         setAppState("scratch");
       }
     } catch (error) {
       console.error("Error generating snap:", error);
       toast.error("Using demo mode - AI generation coming soon!");
-      const demoFrames = [
-        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=500&fit=crop",
-        "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=500&fit=crop",
-        "https://images.unsplash.com/photo-1522529599102-193c0d76b5b6?w=400&h=500&fit=crop",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=500&fit=crop",
-        "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=500&fit=crop",
-      ];
-      setGeneratedFrames(demoFrames.slice(0, frameCount));
+      // Generate demo frames based on frameCount
+      const demoFrames = Array.from({ length: frameCount }, (_, i) => {
+        const images = [
+          "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=500&fit=crop",
+          "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=500&fit=crop",
+        ];
+        return images[i % images.length] + `&seed=${Date.now()}-${i}`;
+      });
+      setGeneratedFrames(demoFrames);
       setNarrative("A shared moment between friends.");
       setAppState("scratch");
     } finally {
