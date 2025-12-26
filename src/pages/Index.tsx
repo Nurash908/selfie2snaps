@@ -129,7 +129,7 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-snap", {
-        body: { image1, image2, ratio: selectedRatio, frameCount },
+        body: { image1, image2, ratio: selectedRatio, vibe: selectedVibe, frameCount },
       });
 
       if (error) throw error;
