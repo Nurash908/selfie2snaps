@@ -1,22 +1,26 @@
 import { useCallback, useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, X, Check } from "lucide-react";
+import { Camera, X, Check, Crop } from "lucide-react";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { useHapticFeedback } from "@/hooks/useHapticFeedback";
 
 interface PortraitCardProps {
   label: string;
   image: string | null;
   onImageUpload: (file: File) => void;
   onRemoveImage: () => void;
+  onCropRequest?: () => void;
   isProcessing?: boolean;
 }
 
-const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, isProcessing = false }: PortraitCardProps) => {
+const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, onCropRequest, isProcessing = false }: PortraitCardProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [pulseEffect, setPulseEffect] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playSound } = useSoundEffects();
+  const { triggerHaptic } = useHapticFeedback();
 
   // Handle loading state when processing
   useEffect(() => {
@@ -29,9 +33,12 @@ const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, isProcessing
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("image/")) {
       playSound("upload");
+      triggerHaptic("success");
+      setPulseEffect(true);
+      setTimeout(() => setPulseEffect(false), 400);
       onImageUpload(file);
     }
-  }, [onImageUpload, playSound]);
+  }, [onImageUpload, playSound, triggerHaptic]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -44,6 +51,7 @@ const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, isProcessing
 
   const handleClick = () => {
     playSound("click");
+    triggerHaptic("light");
     fileInputRef.current?.click();
   };
 
@@ -51,6 +59,9 @@ const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, isProcessing
     const file = e.target.files?.[0];
     if (file) {
       playSound("upload");
+      triggerHaptic("success");
+      setPulseEffect(true);
+      setTimeout(() => setPulseEffect(false), 400);
       onImageUpload(file);
     }
   };
@@ -58,7 +69,17 @@ const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, isProcessing
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
     playSound("click");
+    triggerHaptic("medium");
     onRemoveImage();
+  };
+
+  const handleCrop = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    playSound("click");
+    triggerHaptic("light");
+    if (onCropRequest) {
+      onCropRequest();
+    }
   };
 
   return (
@@ -186,8 +207,21 @@ const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, isProcessing
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 flex items-center justify-center"
+                    className="absolute inset-0 flex items-center justify-center gap-3"
                   >
+                    {/* Crop button */}
+                    {onCropRequest && (
+                      <motion.button
+                        onClick={handleCrop}
+                        className="p-3 rounded-full backdrop-blur-sm"
+                        style={{ background: "hsl(270 95% 55% / 0.8)" }}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <Crop className="w-5 h-5 text-white" />
+                      </motion.button>
+                    )}
+                    {/* Remove button */}
                     <motion.button
                       onClick={handleRemove}
                       className="p-3 rounded-full bg-destructive/80 backdrop-blur-sm"

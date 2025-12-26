@@ -20,8 +20,11 @@ import FavoritesSection from "@/components/FavoritesSection";
 import PreviewGallery from "@/components/PreviewGallery";
 import SuccessConfetti from "@/components/SuccessConfetti";
 import ParticleField from "@/components/ParticleField";
+import TutorialOverlay from "@/components/TutorialOverlay";
+import ImageCropper from "@/components/ImageCropper";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { useHapticFeedback } from "@/hooks/useHapticFeedback";
 
 type AppState = "upload" | "configure" | "processing" | "scratch" | "result";
 
@@ -40,9 +43,21 @@ const Index = () => {
   const [showFavorites, setShowFavorites] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [cropImage, setCropImage] = useState<{ image: string; index: 1 | 2 } | null>(null);
 
   const { user, signOut } = useAuth();
   const { playSound } = useSoundEffects();
+  const { triggerHaptic } = useHapticFeedback();
+
+  // Check if first-time user
+  useEffect(() => {
+    const tutorialComplete = localStorage.getItem("selfie2snap_tutorial_complete");
+    if (!tutorialComplete) {
+      // Small delay to let the page load first
+      setTimeout(() => setShowTutorial(true), 1000);
+    }
+  }, []);
 
   // Mouse tracking for interactive effects
   const mouseX = useMotionValue(0);
@@ -88,6 +103,22 @@ const Index = () => {
     };
     reader.readAsDataURL(file);
   }, []);
+
+  const handleCropRequest = useCallback((index: 1 | 2) => {
+    const image = index === 1 ? image1 : image2;
+    if (image) {
+      setCropImage({ image, index });
+    }
+  }, [image1, image2]);
+
+  const handleCropComplete = useCallback((croppedImage: string) => {
+    if (cropImage) {
+      if (cropImage.index === 1) setImage1(croppedImage);
+      else setImage2(croppedImage);
+      setCropImage(null);
+      toast.success("Image cropped successfully!");
+    }
+  }, [cropImage]);
 
   const handleTransform = async () => {
     playSound("generate");
@@ -349,12 +380,14 @@ const Index = () => {
                     image={image1}
                     onImageUpload={(file) => handleImageUpload(file, 1)}
                     onRemoveImage={() => setImage1(null)}
+                    onCropRequest={() => handleCropRequest(1)}
                   />
                   <PortraitCard
                     label="Portrait 2"
                     image={image2}
                     onImageUpload={(file) => handleImageUpload(file, 2)}
                     onRemoveImage={() => setImage2(null)}
+                    onCropRequest={() => handleCropRequest(2)}
                   />
                 </div>
               </motion.div>
@@ -497,6 +530,20 @@ const Index = () => {
           />
         )}
       </AnimatePresence>
+      
+      {/* Tutorial Overlay */}
+      {showTutorial && (
+        <TutorialOverlay onComplete={() => setShowTutorial(false)} />
+      )}
+
+      {/* Image Cropper */}
+      {cropImage && (
+        <ImageCropper
+          image={cropImage.image}
+          onCropComplete={handleCropComplete}
+          onCancel={() => setCropImage(null)}
+        />
+      )}
     </div>
   );
 };
