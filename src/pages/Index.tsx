@@ -8,6 +8,7 @@ import SystemStatusPanel from "@/components/SystemStatusPanel";
 import PortraitCard from "@/components/PortraitCard";
 import FramesControl from "@/components/FramesControl";
 import RatioSelector from "@/components/RatioSelector";
+import SceneSelector from "@/components/SceneSelector";
 
 import GenerateButton from "@/components/GenerateButton";
 import FeatureCards from "@/components/FeatureCards";
@@ -35,6 +36,7 @@ const Index = () => {
   const [image2, setImage2] = useState<string | null>(null);
   const [frameCount, setFrameCount] = useState(1);
   const [selectedRatio, setSelectedRatio] = useState("16:9");
+  const [selectedScene, setSelectedScene] = useState("natural");
   const [generatedFrames, setGeneratedFrames] = useState<string[]>([]);
   const [narrative, setNarrative] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -128,7 +130,7 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-snap", {
-        body: { image1, image2, ratio: selectedRatio, frameCount },
+        body: { image1, image2, ratio: selectedRatio, frameCount, scene: selectedScene },
       });
 
       if (error) throw error;
@@ -409,7 +411,8 @@ const Index = () => {
                         border: "1px solid hsl(250 30% 20%)",
                       }}
                     >
-                    <FramesControl
+                      <SceneSelector selected={selectedScene} onSelect={setSelectedScene} />
+                      <FramesControl
                         value={frameCount}
                         onChange={setFrameCount}
                         min={1}

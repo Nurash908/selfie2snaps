@@ -12,14 +12,26 @@ serve(async (req) => {
   }
 
   try {
-    const { image1, image2, ratio, frameCount } = await req.json();
+    const { image1, image2, ratio, frameCount, scene } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating combined snap with:", { ratio, frameCount });
+    console.log("Generating combined snap with:", { ratio, frameCount, scene });
+
+    // Scene descriptions for the AI
+    const sceneDescriptions: Record<string, string> = {
+      natural: "a natural, realistic background that fits both people well",
+      beach: "a beautiful sunny tropical beach with palm trees and ocean waves in the background",
+      city: "a modern urban cityscape with tall buildings and city lights in the background",
+      mountains: "majestic mountain peaks with scenic views and natural wilderness in the background",
+      studio: "a professional photography studio with soft lighting and elegant backdrop",
+      party: "a fun party atmosphere with colorful decorations, lights, and celebratory mood"
+    };
+
+    const sceneDescription = sceneDescriptions[scene] || sceneDescriptions.natural;
 
     // Get aspect ratio dimensions
     const ratioDimensions: Record<string, { width: number; height: number }> = {
@@ -95,8 +107,8 @@ serve(async (req) => {
 IMPORTANT: 
 - Keep both people's faces and features exactly as they appear in their original photos
 - Make it look like a real photo taken together, not a collage
-- Natural lighting that matches both subjects
-- Realistic background that fits both people
+- Background: ${sceneDescription}
+- Natural lighting that matches both subjects and the scene
 - Aspect ratio: ${ratio}
 - High quality, professional looking combined photograph`
                     },
