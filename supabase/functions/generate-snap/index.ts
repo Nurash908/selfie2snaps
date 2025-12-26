@@ -12,14 +12,14 @@ serve(async (req) => {
   }
 
   try {
-    const { image1, image2, ratio, frameCount, scene, swapPositions } = await req.json();
+    const { image1, image2, ratio, frameCount, scene, swapPositions, style } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating combined snap with:", { ratio, frameCount, scene, swapPositions });
+    console.log("Generating combined snap with:", { ratio, frameCount, scene, swapPositions, style });
 
     // Scene descriptions for the AI
     const sceneDescriptions: Record<string, string> = {
@@ -32,6 +32,17 @@ serve(async (req) => {
     };
 
     const sceneDescription = sceneDescriptions[scene] || sceneDescriptions.natural;
+
+    // Style descriptions for different visual filters
+    const styleDescriptions: Record<string, string> = {
+      natural: "Natural lighting and colors, clean and realistic look",
+      vintage: "Vintage film look with warm sepia tones, slight grain, faded colors, nostalgic 70s/80s aesthetic",
+      cinematic: "Cinematic movie-like look with dramatic lighting, deep shadows, desaturated colors with teal and orange color grading",
+      vibrant: "Bold and vibrant colors, high saturation, punchy contrast, vivid and eye-catching",
+      neon: "Cyberpunk neon aesthetic with glowing colors, purple and cyan lighting, futuristic atmosphere"
+    };
+
+    const styleDescription = styleDescriptions[style] || styleDescriptions.natural;
 
     // Get aspect ratio dimensions
     const ratioDimensions: Record<string, { width: number; height: number }> = {
@@ -112,9 +123,11 @@ IMPORTANT:
 - Keep both people's faces and features exactly as they appear in their original photos
 - Make it look like a real photo taken together, not a collage
 - Background: ${sceneDescription}
+- Visual style: ${styleDescription}
 - Natural lighting that matches both subjects and the scene
 - Aspect ratio: ${ratio}
-- High quality, professional looking combined photograph`
+- High quality, professional looking combined photograph
+- Apply the visual style consistently to the entire image`
                     },
                     {
                       type: "image_url",
