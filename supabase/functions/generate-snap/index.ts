@@ -12,14 +12,14 @@ serve(async (req) => {
   }
 
   try {
-    const { image1, image2, ratio, frameCount, scene } = await req.json();
+    const { image1, image2, ratio, frameCount, scene, swapPositions } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating combined snap with:", { ratio, frameCount, scene });
+    console.log("Generating combined snap with:", { ratio, frameCount, scene, swapPositions });
 
     // Scene descriptions for the AI
     const sceneDescriptions: Record<string, string> = {
@@ -77,9 +77,13 @@ serve(async (req) => {
     console.log(`Generating ${frameCount} combined frames...`);
 
     for (let i = 0; i < frameCount; i++) {
+      const positionDesc = swapPositions 
+        ? "with the second person on the LEFT and the first person on the RIGHT"
+        : "with the first person on the LEFT and the second person on the RIGHT";
+      
       const variationPrompts = [
-        "side by side, looking at each other or the camera naturally",
-        "one slightly behind the other, both facing forward with friendly expressions"
+        `${positionDesc}, looking at each other or the camera naturally`,
+        `${positionDesc}, one slightly behind the other, both facing forward with friendly expressions`
       ];
       
       const variation = variationPrompts[i % variationPrompts.length];
