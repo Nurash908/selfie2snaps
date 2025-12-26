@@ -27,6 +27,10 @@ import PoseSuggestion from "@/components/PoseSuggestion";
 import FloatingOrbs from "@/components/FloatingOrbs";
 import HolographicCard from "@/components/HolographicCard";
 import GlowingBorder from "@/components/GlowingBorder";
+import StyleSelector from "@/components/StyleSelector";
+import SocialShareButtons from "@/components/SocialShareButtons";
+import Floating3DElement from "@/components/Floating3DElement";
+import MorphingBlob from "@/components/MorphingBlob";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -40,6 +44,7 @@ const Index = () => {
   const [frameCount, setFrameCount] = useState(1);
   const [selectedRatio, setSelectedRatio] = useState("16:9");
   const [selectedScene, setSelectedScene] = useState("natural");
+  const [selectedStyle, setSelectedStyle] = useState("natural");
   const [swapPositions, setSwapPositions] = useState(false);
   const [generatedFrames, setGeneratedFrames] = useState<string[]>([]);
   const [narrative, setNarrative] = useState("");
@@ -134,7 +139,7 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-snap", {
-        body: { image1, image2, ratio: selectedRatio, frameCount, scene: selectedScene, swapPositions },
+        body: { image1, image2, ratio: selectedRatio, frameCount, scene: selectedScene, swapPositions, style: selectedStyle },
       });
 
       if (error) throw error;
@@ -584,6 +589,7 @@ const Index = () => {
                     <HolographicCard>
                       <div className="p-5 space-y-6">
                         <SceneSelector selected={selectedScene} onSelect={setSelectedScene} />
+                        <StyleSelector selected={selectedStyle} onSelect={setSelectedStyle} />
                         <PositionSwapToggle 
                           isSwapped={swapPositions} 
                           onToggle={() => setSwapPositions(!swapPositions)} 
@@ -653,26 +659,68 @@ const Index = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <NarrativeCaption caption={narrative} />
+              {/* Morphing blobs for result screen */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <MorphingBlob color="hsl(270 95% 65%)" size={300} className="top-20 -left-20" />
+                <MorphingBlob color="hsl(35 100% 60%)" size={250} className="bottom-40 -right-10" />
+              </div>
+
+              <Floating3DElement intensity={8} floatAmplitude={5}>
+                <NarrativeCaption caption={narrative} />
+              </Floating3DElement>
+
               <FilmStrip
                 frames={generatedFrames}
                 onBless={() => toast.success("Blessings sent! 💛")}
               />
-              <div className="flex justify-center">
-                <motion.button
-                  onClick={() => {
-                    playSound("preview");
-                    setShowPreview(true);
-                  }}
-                  className="px-6 py-3 rounded-xl font-mono text-sm tracking-wider flex items-center gap-2"
-                  style={{
-                    background: "linear-gradient(135deg, hsl(270 95% 55%), hsl(35 100% 55%))",
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Preview All
-                </motion.button>
+
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex justify-center gap-3">
+                  <motion.button
+                    onClick={() => {
+                      playSound("preview");
+                      setShowPreview(true);
+                    }}
+                    className="px-6 py-3 rounded-xl font-mono text-sm tracking-wider flex items-center gap-2 relative overflow-hidden"
+                    style={{
+                      background: "linear-gradient(135deg, hsl(270 95% 55%), hsl(35 100% 55%))",
+                      boxShadow: "0 8px 32px hsl(270 95% 55% / 0.3)",
+                    }}
+                    whileHover={{ 
+                      scale: 1.05,
+                      boxShadow: "0 12px 40px hsl(270 95% 55% / 0.5)",
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {/* Shine animation */}
+                    <motion.div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background: "linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.3) 50%, transparent 100%)",
+                      }}
+                      animate={{ x: ["-100%", "200%"] }}
+                      transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                    />
+                    <span className="relative z-10">Preview All</span>
+                  </motion.button>
+                </div>
+
+                {/* Social Share Buttons */}
+                {generatedFrames.length > 0 && (
+                  <SocialShareButtons 
+                    imageUrl={generatedFrames[0]} 
+                    caption="Check out my Selfie2Snap creation! Two selfies, one epic moment! 🍌✨"
+                    onDownload={() => {
+                      playSound("download");
+                      // Trigger download
+                      const link = document.createElement('a');
+                      link.href = generatedFrames[0];
+                      link.download = 'selfie2snap.jpg';
+                      link.click();
+                      toast.success("Downloaded!");
+                    }}
+                  />
+                )}
               </div>
               
               <GenerateButton

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2 } from 'lucide-react';
+import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2, Twitter, Facebook, Instagram, Link, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
@@ -17,6 +17,8 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
   const [currentIndex, setCurrentIndex] = useState(0);
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
 
@@ -78,6 +80,39 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
       console.error('Error adding favorite:', error);
       toast.error('Failed to save favorite');
     }
+  };
+
+  const handleShare = async (platform: string) => {
+    playSound('click');
+    const caption = encodeURIComponent("Check out my Selfie2Snap creation! Two selfies, one epic moment! 🍌✨");
+    const url = encodeURIComponent(window.location.href);
+    
+    switch (platform) {
+      case 'twitter':
+        window.open(`https://twitter.com/intent/tweet?text=${caption}&url=${url}`, "_blank");
+        toast.success("Opening Twitter...");
+        break;
+      case 'facebook':
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, "_blank");
+        toast.success("Opening Facebook...");
+        break;
+      case 'instagram':
+        // Download for Instagram
+        handleDownload(currentIndex);
+        toast.info("Image downloaded! Open Instagram and share from your gallery.");
+        break;
+      case 'copy':
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          setCopiedLink(true);
+          toast.success("Link copied!");
+          setTimeout(() => setCopiedLink(false), 2000);
+        } catch {
+          toast.error("Failed to copy link");
+        }
+        break;
+    }
+    setShowShareMenu(false);
   };
 
   return (
@@ -265,7 +300,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 relative">
             <motion.button
               className={`p-3 rounded-xl font-medium flex items-center gap-2 ${
                 favorites.has(currentIndex)
@@ -284,6 +319,62 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
               <Heart className="w-5 h-5" fill={favorites.has(currentIndex) ? 'currentColor' : 'none'} />
               <span className="hidden sm:inline">Favorite</span>
             </motion.button>
+
+            {/* Share Button */}
+            <motion.button
+              className="p-3 rounded-xl bg-primary text-primary-foreground font-medium flex items-center gap-2 relative"
+              onClick={() => {
+                playSound('click');
+                setShowShareMenu(!showShareMenu);
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                boxShadow: '0 0 20px hsl(270 95% 65% / 0.3)',
+              }}
+            >
+              <Share2 className="w-5 h-5" />
+              <span className="hidden sm:inline">Share</span>
+            </motion.button>
+
+            {/* Share Menu */}
+            <AnimatePresence>
+              {showShareMenu && (
+                <motion.div
+                  className="absolute bottom-full right-0 mb-3 flex gap-2 p-3 rounded-xl"
+                  style={{
+                    background: 'linear-gradient(180deg, hsl(250 30% 15%) 0%, hsl(250 25% 10%) 100%)',
+                    border: '1px solid hsl(250 30% 25%)',
+                    boxShadow: '0 10px 40px hsl(0 0% 0% / 0.5)',
+                  }}
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                >
+                  {[
+                    { id: 'twitter', icon: Twitter, color: 'hsl(203 89% 53%)' },
+                    { id: 'facebook', icon: Facebook, color: 'hsl(220 46% 48%)' },
+                    { id: 'instagram', icon: Instagram, color: 'hsl(340 75% 55%)' },
+                    { id: 'copy', icon: copiedLink ? Check : Link, color: 'hsl(270 95% 65%)' },
+                  ].map((platform) => (
+                    <motion.button
+                      key={platform.id}
+                      onClick={() => handleShare(platform.id)}
+                      className="p-2.5 rounded-lg"
+                      style={{ background: 'hsl(250 25% 18%)' }}
+                      whileHover={{ 
+                        scale: 1.1,
+                        background: `${platform.color}30`,
+                      }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <platform.icon className="w-5 h-5" style={{ color: platform.color }} />
+                    </motion.button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <motion.button
               className="p-3 rounded-xl bg-card/80 text-foreground hover:bg-card font-medium flex items-center gap-2"
               onClick={() => handleDownload(currentIndex)}
