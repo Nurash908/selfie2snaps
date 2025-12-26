@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2, Twitter, Facebook, Instagram, Link, Check } from 'lucide-react';
+import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2, Twitter, Facebook, Instagram, Link, Check, Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
@@ -19,6 +19,8 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
+  const [savingFavorite, setSavingFavorite] = useState(false);
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
 
@@ -34,7 +36,12 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
 
   const handleDownload = async (index: number) => {
     playSound('download');
+    setDownloadingIndex(index);
+    
     try {
+      // Simulate a small delay for animation
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const response = await fetch(frames[index]);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -45,9 +52,11 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('Downloaded!');
+      toast.success('Downloaded successfully! 🎉');
     } catch (error) {
       toast.error('Failed to download');
+    } finally {
+      setDownloadingIndex(null);
     }
   };
 
@@ -60,6 +69,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
     }
 
     playSound('favorite');
+    setSavingFavorite(true);
     const imageUrl = frames[index];
     
     try {
@@ -75,37 +85,43 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
       if (error) throw error;
 
       setFavorites(prev => new Set([...prev, index]));
-      toast.success('Added to favorites!');
-    } catch (error) {
+      toast.success('Added to favorites! ❤️');
+    } catch (error: any) {
       console.error('Error adding favorite:', error);
-      toast.error('Failed to save favorite');
+      if (error.message?.includes('duplicate')) {
+        toast.info('Already in favorites');
+      } else {
+        toast.error('Failed to save favorite');
+      }
+    } finally {
+      setSavingFavorite(false);
     }
   };
 
   const handleShare = async (platform: string) => {
     playSound('click');
-    const caption = encodeURIComponent("Check out my Selfie2Snap creation! Two selfies, one epic moment! 🍌✨");
+    const caption = encodeURIComponent("Check out my Selfie2Snap creation! Two selfies, one epic moment! 🍌✨ #Selfie2Snap");
     const url = encodeURIComponent(window.location.href);
     
     switch (platform) {
       case 'twitter':
-        window.open(`https://twitter.com/intent/tweet?text=${caption}&url=${url}`, "_blank");
+        window.open(`https://twitter.com/intent/tweet?text=${caption}&url=${url}`, "_blank", "width=600,height=400");
         toast.success("Opening Twitter...");
         break;
       case 'facebook':
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, "_blank");
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${caption}`, "_blank", "width=600,height=400");
         toast.success("Opening Facebook...");
         break;
       case 'instagram':
         // Download for Instagram
         handleDownload(currentIndex);
-        toast.info("Image downloaded! Open Instagram and share from your gallery.");
+        toast.info("Image downloaded! Open Instagram and share from your gallery. 📸");
         break;
       case 'copy':
         try {
           await navigator.clipboard.writeText(window.location.href);
           setCopiedLink(true);
-          toast.success("Link copied!");
+          toast.success("Link copied to clipboard! 🔗");
           setTimeout(() => setCopiedLink(false), 2000);
         } catch {
           toast.error("Failed to copy link");
@@ -114,6 +130,12 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
     }
     setShowShareMenu(false);
   };
+
+  // Download animation particles
+  const downloadParticles = Array.from({ length: 8 }, (_, i) => ({
+    id: i,
+    delay: i * 0.1,
+  }));
 
   return (
     <motion.div
@@ -131,15 +153,16 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
       {/* Gallery container */}
       <motion.div
         className="relative w-full max-w-4xl"
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 20 }}
+        initial={{ scale: 0.9, y: 20, rotateX: -10 }}
+        animate={{ scale: 1, y: 0, rotateX: 0 }}
+        exit={{ scale: 0.9, y: 20, rotateX: 10 }}
+        transition={{ type: "spring", damping: 20, stiffness: 200 }}
       >
         {/* Close button */}
         <motion.button
           className="absolute -top-16 right-0 p-3 rounded-full bg-card/80 backdrop-blur-sm text-foreground hover:bg-card transition-colors z-10"
           onClick={onClose}
-          whileHover={{ scale: 1.1 }}
+          whileHover={{ scale: 1.1, rotate: 90 }}
           whileTap={{ scale: 0.9 }}
         >
           <X className="w-5 h-5" />
@@ -151,10 +174,10 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
             <motion.div
               key={currentIndex}
               className="relative aspect-[4/5] w-full max-h-[70vh]"
-              initial={{ opacity: 0, rotateY: -10, scale: 0.95 }}
-              animate={{ opacity: 1, rotateY: 0, scale: 1 }}
-              exit={{ opacity: 0, rotateY: 10, scale: 0.95 }}
-              transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
+              initial={{ opacity: 0, rotateY: -15, scale: 0.9, x: 50 }}
+              animate={{ opacity: 1, rotateY: 0, scale: 1, x: 0 }}
+              exit={{ opacity: 0, rotateY: 15, scale: 0.9, x: -50 }}
+              transition={{ duration: 0.5, type: "spring", stiffness: 200 }}
               onClick={() => {
                 playSound('preview');
                 setIsFullscreen(true);
@@ -197,41 +220,44 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
               />
 
               {/* Floating sparkles effect */}
-              <motion.div
-                className="absolute top-4 left-4 w-2 h-2 rounded-full bg-secondary"
-                animate={{
-                  y: [0, -10, 0],
-                  opacity: [0.5, 1, 0.5],
-                  scale: [1, 1.5, 1],
-                }}
-                transition={{ duration: 2, repeat: Infinity, delay: 0 }}
-                style={{ boxShadow: '0 0 10px hsl(35 100% 60%)' }}
-              />
-              <motion.div
-                className="absolute bottom-8 right-8 w-1.5 h-1.5 rounded-full bg-primary"
-                animate={{
-                  y: [0, -8, 0],
-                  opacity: [0.5, 1, 0.5],
-                  scale: [1, 1.3, 1],
-                }}
-                transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
-                style={{ boxShadow: '0 0 8px hsl(270 95% 65%)' }}
-              />
-              <motion.div
-                className="absolute top-1/3 right-6 w-1 h-1 rounded-full bg-foreground"
-                animate={{
-                  y: [0, -6, 0],
-                  opacity: [0.3, 0.8, 0.3],
-                }}
-                transition={{ duration: 3, repeat: Infinity, delay: 1 }}
-              />
+              {[
+                { top: "10%", left: "10%", delay: 0, color: "secondary" },
+                { top: "20%", right: "15%", delay: 0.5, color: "primary" },
+                { bottom: "30%", left: "20%", delay: 1, color: "primary" },
+                { bottom: "15%", right: "25%", delay: 1.5, color: "secondary" },
+              ].map((spark, i) => (
+                <motion.div
+                  key={i}
+                  className={`absolute w-1.5 h-1.5 rounded-full bg-${spark.color}`}
+                  style={{ 
+                    ...spark,
+                    boxShadow: `0 0 10px var(--${spark.color})`,
+                  }}
+                  animate={{
+                    y: [0, -10, 0],
+                    opacity: [0.3, 1, 0.3],
+                    scale: [1, 1.5, 1],
+                  }}
+                  transition={{ duration: 2.5, repeat: Infinity, delay: spark.delay }}
+                />
+              ))}
 
               {/* Expand icon */}
               <motion.div
                 className="absolute top-4 right-4 p-2 rounded-full bg-background/50 backdrop-blur-sm text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                whileHover={{ scale: 1.1 }}
+                whileHover={{ scale: 1.2 }}
               >
                 <Maximize2 className="w-4 h-4" />
+              </motion.div>
+
+              {/* Frame number badge */}
+              <motion.div
+                className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-background/60 backdrop-blur-sm text-foreground text-xs font-mono"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                Frame {currentIndex + 1}
               </motion.div>
             </motion.div>
           </AnimatePresence>
@@ -242,7 +268,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
               <motion.button
                 className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-background/80 backdrop-blur-sm text-foreground hover:bg-background transition-colors"
                 onClick={handlePrev}
-                whileHover={{ scale: 1.1, x: -2 }}
+                whileHover={{ scale: 1.15, x: -3 }}
                 whileTap={{ scale: 0.9 }}
               >
                 <ChevronLeft className="w-6 h-6" />
@@ -250,7 +276,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
               <motion.button
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-background/80 backdrop-blur-sm text-foreground hover:bg-background transition-colors"
                 onClick={handleNext}
-                whileHover={{ scale: 1.1, x: 2 }}
+                whileHover={{ scale: 1.15, x: 3 }}
                 whileTap={{ scale: 0.9 }}
               >
                 <ChevronRight className="w-6 h-6" />
@@ -267,17 +293,17 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
               <motion.button
                 key={index}
                 className={`relative w-16 h-20 rounded-lg overflow-hidden flex-shrink-0 ${
-                  currentIndex === index ? 'ring-2 ring-primary' : ''
+                  currentIndex === index ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
                 }`}
                 onClick={() => {
                   playSound('click');
                   setCurrentIndex(index);
                 }}
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.1, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 style={{
                   boxShadow: currentIndex === index
-                    ? '0 0 20px hsl(270 95% 65% / 0.4)'
+                    ? '0 0 25px hsl(270 95% 65% / 0.5)'
                     : '0 4px 10px hsl(0 0% 0% / 0.2)',
                 }}
               >
@@ -289,11 +315,20 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
                 {favorites.has(index) && (
                   <motion.div
                     className="absolute top-1 right-1"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 500 }}
                   >
-                    <Heart className="w-3 h-3 text-secondary" fill="currentColor" />
+                    <Heart className="w-3 h-3 text-secondary drop-shadow-lg" fill="currentColor" />
                   </motion.div>
+                )}
+                {/* Active indicator */}
+                {currentIndex === index && (
+                  <motion.div
+                    className="absolute inset-0 bg-primary/10"
+                    layoutId="activeThumb"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
                 )}
               </motion.button>
             ))}
@@ -301,22 +336,56 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
 
           {/* Action buttons */}
           <div className="flex gap-3 relative">
+            {/* Favorite Button */}
             <motion.button
-              className={`p-3 rounded-xl font-medium flex items-center gap-2 ${
+              className={`p-3 rounded-xl font-medium flex items-center gap-2 relative overflow-hidden ${
                 favorites.has(currentIndex)
                   ? 'bg-secondary text-secondary-foreground'
                   : 'bg-card/80 text-foreground hover:bg-card'
               }`}
               onClick={() => handleFavorite(currentIndex)}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
+              disabled={savingFavorite}
               style={{
                 boxShadow: favorites.has(currentIndex)
-                  ? '0 0 20px hsl(35 100% 60% / 0.4)'
+                  ? '0 0 25px hsl(35 100% 60% / 0.5)'
                   : 'none',
               }}
             >
-              <Heart className="w-5 h-5" fill={favorites.has(currentIndex) ? 'currentColor' : 'none'} />
+              {/* Success particles */}
+              <AnimatePresence>
+                {favorites.has(currentIndex) && (
+                  <>
+                    {[...Array(6)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        className="absolute w-1 h-1 rounded-full bg-secondary"
+                        initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                        animate={{ 
+                          x: (Math.random() - 0.5) * 60,
+                          y: (Math.random() - 0.5) * 60,
+                          opacity: 0,
+                          scale: 0,
+                        }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6, delay: i * 0.05 }}
+                        style={{ left: "50%", top: "50%" }}
+                      />
+                    ))}
+                  </>
+                )}
+              </AnimatePresence>
+              {savingFavorite ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <motion.div
+                  animate={favorites.has(currentIndex) ? { scale: [1, 1.3, 1] } : {}}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Heart className="w-5 h-5" fill={favorites.has(currentIndex) ? 'currentColor' : 'none'} />
+                </motion.div>
+              )}
               <span className="hidden sm:inline">Favorite</span>
             </motion.button>
 
@@ -327,13 +396,18 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
                 playSound('click');
                 setShowShareMenu(!showShareMenu);
               }}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
               style={{
-                boxShadow: '0 0 20px hsl(270 95% 65% / 0.3)',
+                boxShadow: '0 0 25px hsl(270 95% 65% / 0.4)',
               }}
             >
-              <Share2 className="w-5 h-5" />
+              <motion.div
+                animate={showShareMenu ? { rotate: 180 } : { rotate: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Share2 className="w-5 h-5" />
+              </motion.div>
               <span className="hidden sm:inline">Share</span>
             </motion.button>
 
@@ -352,52 +426,101 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
                   exit={{ opacity: 0, y: 10, scale: 0.9 }}
                 >
                   {[
-                    { id: 'twitter', icon: Twitter, color: 'hsl(203 89% 53%)' },
-                    { id: 'facebook', icon: Facebook, color: 'hsl(220 46% 48%)' },
-                    { id: 'instagram', icon: Instagram, color: 'hsl(340 75% 55%)' },
-                    { id: 'copy', icon: copiedLink ? Check : Link, color: 'hsl(270 95% 65%)' },
-                  ].map((platform) => (
+                    { id: 'twitter', icon: Twitter, color: 'hsl(203 89% 53%)', label: 'Twitter' },
+                    { id: 'facebook', icon: Facebook, color: 'hsl(220 46% 48%)', label: 'Facebook' },
+                    { id: 'instagram', icon: Instagram, color: 'hsl(340 75% 55%)', label: 'Instagram' },
+                    { id: 'copy', icon: copiedLink ? Check : Link, color: 'hsl(270 95% 65%)', label: copiedLink ? 'Copied!' : 'Copy Link' },
+                  ].map((platform, i) => (
                     <motion.button
                       key={platform.id}
                       onClick={() => handleShare(platform.id)}
-                      className="p-2.5 rounded-lg"
+                      className="p-2.5 rounded-lg flex flex-col items-center gap-1"
                       style={{ background: 'hsl(250 25% 18%)' }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
                       whileHover={{ 
-                        scale: 1.1,
+                        scale: 1.15,
                         background: `${platform.color}30`,
                       }}
                       whileTap={{ scale: 0.9 }}
                     >
                       <platform.icon className="w-5 h-5" style={{ color: platform.color }} />
+                      <span className="text-[10px] text-muted-foreground">{platform.label}</span>
                     </motion.button>
                   ))}
                 </motion.div>
               )}
             </AnimatePresence>
 
+            {/* Download Button */}
             <motion.button
-              className="p-3 rounded-xl bg-card/80 text-foreground hover:bg-card font-medium flex items-center gap-2"
+              className="p-3 rounded-xl bg-card/80 text-foreground hover:bg-card font-medium flex items-center gap-2 relative overflow-hidden"
               onClick={() => handleDownload(currentIndex)}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
+              disabled={downloadingIndex !== null}
             >
-              <Download className="w-5 h-5" />
-              <span className="hidden sm:inline">Download</span>
+              {/* Download particles animation */}
+              <AnimatePresence>
+                {downloadingIndex === currentIndex && (
+                  <>
+                    {downloadParticles.map((p) => (
+                      <motion.div
+                        key={p.id}
+                        className="absolute w-1.5 h-1.5 rounded-full bg-primary"
+                        initial={{ y: -20, opacity: 0 }}
+                        animate={{ y: 30, opacity: [0, 1, 0] }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6, delay: p.delay, repeat: Infinity }}
+                        style={{ left: `${20 + p.id * 8}%` }}
+                      />
+                    ))}
+                  </>
+                )}
+              </AnimatePresence>
+              
+              {downloadingIndex === currentIndex ? (
+                <motion.div
+                  animate={{ y: [0, 5, 0] }}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                >
+                  <Download className="w-5 h-5 text-primary" />
+                </motion.div>
+              ) : (
+                <Download className="w-5 h-5" />
+              )}
+              <span className="hidden sm:inline">
+                {downloadingIndex === currentIndex ? 'Downloading...' : 'Download'}
+              </span>
             </motion.button>
           </div>
         </div>
 
-        {/* Counter */}
-        <p className="text-center mt-4 text-sm text-muted-foreground font-mono">
-          {currentIndex + 1} / {frames.length}
-        </p>
+        {/* Counter with animation */}
+        <motion.p 
+          className="text-center mt-4 text-sm text-muted-foreground font-mono"
+          key={currentIndex}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <motion.span
+            className="inline-block"
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 0.3 }}
+          >
+            {currentIndex + 1}
+          </motion.span>
+          {" / "}
+          {frames.length}
+        </motion.p>
       </motion.div>
 
       {/* Fullscreen modal */}
       <AnimatePresence>
         {isFullscreen && (
           <motion.div
-            className="fixed inset-0 z-60 flex items-center justify-center bg-background"
+            className="fixed inset-0 z-60 flex items-center justify-center bg-background cursor-zoom-out"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -407,10 +530,20 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
               src={frames[currentIndex]}
               alt={`Full ${currentIndex + 1}`}
               className="max-w-full max-h-full object-contain"
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 200 }}
             />
+            {/* Close hint */}
+            <motion.p
+              className="absolute bottom-8 text-muted-foreground text-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              Click anywhere to close
+            </motion.p>
           </motion.div>
         )}
       </AnimatePresence>
