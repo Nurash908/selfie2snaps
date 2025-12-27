@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Download, Trash2, X, Sparkles, ImageOff } from 'lucide-react';
+import { Heart, Download, Trash2, X, Sparkles, ImageOff, Package, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
@@ -23,6 +23,9 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedForBatch, setSelectedForBatch] = useState<Set<string>>(new Set());
+  const [isBatchDownloading, setIsBatchDownloading] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
 
@@ -61,6 +64,11 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
       
       if (error) throw error;
       setFavorites(prev => prev.filter(f => f.id !== id));
+      setSelectedForBatch(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       toast.success('Removed from favorites');
     } catch (error) {
       console.error('Error deleting favorite:', error);
@@ -84,6 +92,72 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
       toast.success('Downloaded!');
     } catch (error) {
       toast.error('Failed to download');
+    }
+  };
+
+  const toggleBatchSelect = (id: string) => {
+    playSound('click');
+    setSelectedForBatch(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    playSound('click');
+    if (selectedForBatch.size === favorites.length) {
+      setSelectedForBatch(new Set());
+    } else {
+      setSelectedForBatch(new Set(favorites.map(f => f.id)));
+    }
+  };
+
+  const handleBatchDownload = async () => {
+    if (selectedForBatch.size === 0) {
+      toast.error('Select items to download');
+      return;
+    }
+
+    setIsBatchDownloading(true);
+    setBatchProgress(0);
+    playSound('generate');
+
+    const selectedItems = favorites.filter(f => selectedForBatch.has(f.id));
+    let completed = 0;
+
+    try {
+      for (const item of selectedItems) {
+        const response = await fetch(item.image_url);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `favorite-${item.id.slice(0, 8)}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        completed++;
+        setBatchProgress((completed / selectedItems.length) * 100);
+        
+        // Small delay between downloads
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      playSound('success');
+      toast.success(`Downloaded ${selectedItems.length} favorites!`);
+      setSelectedForBatch(new Set());
+    } catch (error) {
+      toast.error('Some downloads failed');
+    } finally {
+      setIsBatchDownloading(false);
+      setBatchProgress(0);
     }
   };
 
@@ -143,8 +217,78 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
               </motion.button>
             </div>
 
+            {/* Batch Actions */}
+            {favorites.length > 0 && (
+              <motion.div
+                className="px-6 py-3 border-b border-border/20 flex items-center justify-between gap-3"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    onClick={selectAll}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    style={{
+                      background: selectedForBatch.size === favorites.length ? 'hsl(270 95% 65% / 0.3)' : 'hsl(250 25% 15%)',
+                      color: selectedForBatch.size === favorites.length ? 'hsl(270 95% 75%)' : 'hsl(0 0% 70%)',
+                    }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {selectedForBatch.size === favorites.length ? 'Deselect All' : 'Select All'}
+                  </motion.button>
+                  {selectedForBatch.size > 0 && (
+                    <motion.span
+                      className="text-xs text-muted-foreground"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                    >
+                      {selectedForBatch.size} selected
+                    </motion.span>
+                  )}
+                </div>
+
+                <motion.button
+                  onClick={handleBatchDownload}
+                  disabled={selectedForBatch.size === 0 || isBatchDownloading}
+                  className="px-4 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 relative overflow-hidden"
+                  style={{
+                    background: selectedForBatch.size > 0 
+                      ? 'linear-gradient(135deg, hsl(270 95% 55%), hsl(300 80% 50%))' 
+                      : 'hsl(250 25% 15%)',
+                    color: selectedForBatch.size > 0 ? 'hsl(0 0% 100%)' : 'hsl(0 0% 50%)',
+                    boxShadow: selectedForBatch.size > 0 ? '0 4px 15px hsl(270 95% 55% / 0.3)' : 'none',
+                  }}
+                  whileHover={selectedForBatch.size > 0 ? { scale: 1.05 } : {}}
+                  whileTap={selectedForBatch.size > 0 ? { scale: 0.95 } : {}}
+                >
+                  {isBatchDownloading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      {Math.round(batchProgress)}%
+                    </>
+                  ) : (
+                    <>
+                      <Package className="w-3.5 h-3.5" />
+                      Download Selected
+                    </>
+                  )}
+                  
+                  {/* Progress bar */}
+                  {isBatchDownloading && (
+                    <motion.div
+                      className="absolute bottom-0 left-0 h-0.5 bg-foreground/50"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${batchProgress}%` }}
+                    />
+                  )}
+                </motion.button>
+              </motion.div>
+            )}
+
             {/* Content */}
-            <div className="p-6 overflow-y-auto h-[calc(100vh-100px)]">
+            <div className="p-6 overflow-y-auto h-[calc(100vh-180px)]">
               {loading ? (
                 <div className="flex flex-col items-center justify-center h-64 gap-4">
                   <motion.div
@@ -171,7 +315,7 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
                   {favorites.map((fav, index) => (
                     <motion.div
                       key={fav.id}
-                      className="relative group rounded-xl overflow-hidden"
+                      className={`relative group rounded-xl overflow-hidden cursor-pointer ${selectedForBatch.has(fav.id) ? 'ring-2 ring-primary' : ''}`}
                       initial={{ opacity: 0, scale: 0.8, y: 20 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
@@ -179,12 +323,38 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
                       style={{
                         boxShadow: '0 10px 30px hsl(0 0% 0% / 0.3)',
                       }}
+                      onClick={() => toggleBatchSelect(fav.id)}
                     >
+                      {/* Selection indicator */}
+                      <motion.div
+                        className="absolute top-2 left-2 z-20"
+                        initial={false}
+                        animate={{ scale: selectedForBatch.has(fav.id) ? 1 : 0.8, opacity: selectedForBatch.has(fav.id) ? 1 : 0.5 }}
+                      >
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            selectedForBatch.has(fav.id) 
+                              ? 'bg-primary border-primary' 
+                              : 'border-foreground/50 bg-card/50'
+                          }`}
+                        >
+                          {selectedForBatch.has(fav.id) && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-foreground" />
+                            </motion.div>
+                          )}
+                        </div>
+                      </motion.div>
+
                       <img
                         src={fav.image_url}
                         alt={fav.title || 'Favorite snap'}
-                        className="w-full aspect-[3/4] object-cover cursor-pointer"
-                        onClick={() => {
+                        className="w-full aspect-[3/4] object-cover"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           playSound('preview');
                           setSelectedImage(fav.image_url);
                         }}
@@ -193,6 +363,7 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
                       {/* Overlay */}
                       <motion.div
                         className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <motion.button
                           onClick={() => handleDownload(fav.image_url, index)}
@@ -214,7 +385,7 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
 
                       {/* Vibe badge */}
                       {fav.vibe && (
-                        <div className="absolute top-2 left-2 px-2 py-1 rounded-full text-[10px] font-medium bg-card/80 backdrop-blur-sm text-foreground flex items-center gap-1">
+                        <div className="absolute top-2 right-2 px-2 py-1 rounded-full text-[10px] font-medium bg-card/80 backdrop-blur-sm text-foreground flex items-center gap-1">
                           <Sparkles className="w-3 h-3" />
                           {fav.vibe}
                         </div>
