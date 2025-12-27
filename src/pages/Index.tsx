@@ -33,6 +33,8 @@ import StyleSelector from "@/components/StyleSelector";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import Floating3DElement from "@/components/Floating3DElement";
 import MorphingBlob from "@/components/MorphingBlob";
+import ThemeToggle from "@/components/ThemeToggle";
+import GenerationNotification from "@/components/GenerationNotification";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -66,6 +68,7 @@ const Index = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [cropImage, setCropImage] = useState<{ image: string; index: 1 | 2 } | null>(null);
+  const [showGenerationNotification, setShowGenerationNotification] = useState(false);
 
   const { user, signOut } = useAuth();
   const { playSound } = useSoundEffects();
@@ -198,6 +201,7 @@ const Index = () => {
         setNarrative(narrativeText);
         // Save to history
         await saveToHistory(data.frames, narrativeText);
+        setShowGenerationNotification(true);
         setAppState("scratch");
       } else {
         // Generate demo frames based on frameCount
@@ -213,6 +217,7 @@ const Index = () => {
         setNarrative(demoNarrative);
         // Save demo frames to history too
         await saveToHistory(demoFrames, demoNarrative);
+        setShowGenerationNotification(true);
         setAppState("scratch");
       }
     } catch (error) {
@@ -231,6 +236,7 @@ const Index = () => {
       setNarrative(demoNarrative);
       // Save demo frames to history
       await saveToHistory(demoFrames, demoNarrative);
+      setShowGenerationNotification(true);
       setAppState("scratch");
     } finally {
       setIsGenerating(false);
@@ -278,6 +284,15 @@ const Index = () => {
     >
       {/* Confetti effect on success */}
       <SuccessConfetti trigger={showConfetti} onComplete={handleConfettiComplete} />
+
+      {/* Generation notification */}
+      <GenerationNotification
+        isVisible={showGenerationNotification}
+        userName={user?.email}
+        frameCount={generatedFrames.length}
+        onClose={() => setShowGenerationNotification(false)}
+        onViewResults={() => setShowPreview(true)}
+      />
 
       {/* Floating orbs background */}
       <FloatingOrbs intensity="medium" />
@@ -332,6 +347,9 @@ const Index = () => {
 
       {/* Auth, History & Favorites buttons */}
       <div className="fixed top-4 right-4 z-40 flex gap-2">
+        {/* Theme Toggle */}
+        <ThemeToggle onToggle={() => playSound("click")} />
+        
         {user && (
           <>
             <motion.button
