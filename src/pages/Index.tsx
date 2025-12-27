@@ -19,6 +19,7 @@ import NarrativeCaption from "@/components/NarrativeCaption";
 import AuthModal from "@/components/AuthModal";
 import FavoritesSection from "@/components/FavoritesSection";
 import HistorySection from "@/components/HistorySection";
+import PersonalizedGreeting from "@/components/PersonalizedGreeting";
 import PreviewGallery from "@/components/PreviewGallery";
 import SuccessConfetti from "@/components/SuccessConfetti";
 import ParticleField from "@/components/ParticleField";
@@ -55,6 +56,12 @@ const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  
+  const handleRegenerateFromHistory = (settings: { style: string; scene: string; ratio: string }) => {
+    setSelectedStyle(settings.style);
+    setSelectedScene(settings.scene);
+    setSelectedRatio(settings.ratio);
+  };
   const [showPreview, setShowPreview] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -533,7 +540,9 @@ const Index = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="space-y-6"
-            >
+              {/* Personalized Greeting */}
+              <PersonalizedGreeting />
+              
               {/* System Status */}
               <SystemStatusPanel progress={progress} status={progressStatus} />
 

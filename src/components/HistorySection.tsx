@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { History, Download, Trash2, X, Sparkles, ImageOff, Clock, Palette, MapPin, Loader2, Eye } from 'lucide-react';
+import { History, Download, Trash2, X, Sparkles, ImageOff, Clock, Palette, MapPin, Loader2, Eye, RefreshCw, Package, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
@@ -19,13 +19,17 @@ interface HistoryItem {
 interface HistorySectionProps {
   isOpen: boolean;
   onClose: () => void;
+  onRegenerate?: (settings: { style: string; scene: string; ratio: string }) => void;
 }
 
-const HistorySection = ({ isOpen, onClose }: HistorySectionProps) => {
+const HistorySection = ({ isOpen, onClose, onRegenerate }: HistorySectionProps) => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<HistoryItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedForBatch, setSelectedForBatch] = useState<Set<string>>(new Set());
+  const [isBatchDownloading, setIsBatchDownloading] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
 
@@ -66,6 +70,11 @@ const HistorySection = ({ isOpen, onClose }: HistorySectionProps) => {
       
       if (error) throw error;
       setHistory(prev => prev.filter(h => h.id !== id));
+      setSelectedForBatch(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       toast.success('Removed from history');
     } catch (error) {
       console.error('Error deleting history:', error);
@@ -91,6 +100,87 @@ const HistorySection = ({ isOpen, onClose }: HistorySectionProps) => {
       toast.success('Downloaded!');
     } catch (error) {
       toast.error('Failed to download');
+    }
+  };
+
+  const toggleBatchSelect = (id: string) => {
+    playSound('click');
+    setSelectedForBatch(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    playSound('click');
+    if (selectedForBatch.size === history.length) {
+      setSelectedForBatch(new Set());
+    } else {
+      setSelectedForBatch(new Set(history.map(h => h.id)));
+    }
+  };
+
+  const handleBatchDownload = async () => {
+    if (selectedForBatch.size === 0) {
+      toast.error('Select items to download');
+      return;
+    }
+
+    setIsBatchDownloading(true);
+    setBatchProgress(0);
+    playSound('generate');
+
+    const selectedItems = history.filter(h => selectedForBatch.has(h.id));
+    let completed = 0;
+
+    try {
+      for (const item of selectedItems) {
+        const response = await fetch(item.image_url);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `selfie2snap-${item.id.slice(0, 8)}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        completed++;
+        setBatchProgress((completed / selectedItems.length) * 100);
+        
+        // Small delay between downloads
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      playSound('success');
+      toast.success(`Downloaded ${selectedItems.length} snaps!`);
+      setSelectedForBatch(new Set());
+    } catch (error) {
+      toast.error('Some downloads failed');
+    } finally {
+      setIsBatchDownloading(false);
+      setBatchProgress(0);
+    }
+  };
+
+  const handleRegenerate = (item: HistoryItem) => {
+    playSound('click');
+    if (onRegenerate && item.style && item.scene && item.ratio) {
+      onRegenerate({
+        style: item.style,
+        scene: item.scene,
+        ratio: item.ratio,
+      });
+      onClose();
+      toast.success('Settings loaded! Upload images and generate.');
+    } else {
+      toast.error('Missing settings for regeneration');
     }
   };
 
@@ -190,8 +280,78 @@ const HistorySection = ({ isOpen, onClose }: HistorySectionProps) => {
               </motion.button>
             </div>
 
+            {/* Batch Actions */}
+            {history.length > 0 && (
+              <motion.div
+                className="px-6 py-3 border-b border-border/20 flex items-center justify-between gap-3"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    onClick={selectAll}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    style={{
+                      background: selectedForBatch.size === history.length ? 'hsl(270 95% 65% / 0.3)' : 'hsl(250 25% 15%)',
+                      color: selectedForBatch.size === history.length ? 'hsl(270 95% 75%)' : 'hsl(0 0% 70%)',
+                    }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {selectedForBatch.size === history.length ? 'Deselect All' : 'Select All'}
+                  </motion.button>
+                  {selectedForBatch.size > 0 && (
+                    <motion.span
+                      className="text-xs text-muted-foreground"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                    >
+                      {selectedForBatch.size} selected
+                    </motion.span>
+                  )}
+                </div>
+
+                <motion.button
+                  onClick={handleBatchDownload}
+                  disabled={selectedForBatch.size === 0 || isBatchDownloading}
+                  className="px-4 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 relative overflow-hidden"
+                  style={{
+                    background: selectedForBatch.size > 0 
+                      ? 'linear-gradient(135deg, hsl(145 80% 40%), hsl(170 80% 40%))' 
+                      : 'hsl(250 25% 15%)',
+                    color: selectedForBatch.size > 0 ? 'hsl(0 0% 100%)' : 'hsl(0 0% 50%)',
+                    boxShadow: selectedForBatch.size > 0 ? '0 4px 15px hsl(145 80% 40% / 0.3)' : 'none',
+                  }}
+                  whileHover={selectedForBatch.size > 0 ? { scale: 1.05 } : {}}
+                  whileTap={selectedForBatch.size > 0 ? { scale: 0.95 } : {}}
+                >
+                  {isBatchDownloading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      {Math.round(batchProgress)}%
+                    </>
+                  ) : (
+                    <>
+                      <Package className="w-3.5 h-3.5" />
+                      Download Selected
+                    </>
+                  )}
+                  
+                  {/* Progress bar */}
+                  {isBatchDownloading && (
+                    <motion.div
+                      className="absolute bottom-0 left-0 h-0.5 bg-foreground/50"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${batchProgress}%` }}
+                    />
+                  )}
+                </motion.button>
+              </motion.div>
+            )}
+
             {/* Content */}
-            <div className="p-6 overflow-y-auto h-[calc(100vh-100px)]">
+            <div className="p-6 overflow-y-auto h-[calc(100vh-180px)]">
               {loading ? (
                 <div className="flex flex-col items-center justify-center h-64 gap-4">
                   <motion.div
@@ -226,21 +386,49 @@ const HistorySection = ({ isOpen, onClose }: HistorySectionProps) => {
                   {history.map((item, index) => (
                     <motion.div
                       key={item.id}
-                      className="relative group rounded-2xl overflow-hidden"
+                      className={`relative group rounded-2xl overflow-hidden cursor-pointer ${selectedForBatch.has(item.id) ? 'ring-2 ring-primary' : ''}`}
                       initial={{ opacity: 0, x: 50, scale: 0.9 }}
                       animate={{ opacity: 1, x: 0, scale: 1 }}
                       transition={{ delay: index * 0.05, type: "spring", stiffness: 200 }}
                       whileHover={{ scale: 1.02 }}
                       style={{
-                        background: 'linear-gradient(135deg, hsl(250 25% 15%) 0%, hsl(250 25% 12%) 100%)',
+                        background: selectedForBatch.has(item.id) 
+                          ? 'linear-gradient(135deg, hsl(270 40% 18%) 0%, hsl(250 25% 14%) 100%)'
+                          : 'linear-gradient(135deg, hsl(250 25% 15%) 0%, hsl(250 25% 12%) 100%)',
                         boxShadow: '0 10px 30px hsl(0 0% 0% / 0.3)',
                       }}
+                      onClick={() => toggleBatchSelect(item.id)}
                     >
+                      {/* Selection indicator */}
+                      <motion.div
+                        className="absolute top-2 left-2 z-20"
+                        initial={false}
+                        animate={{ scale: selectedForBatch.has(item.id) ? 1 : 0.8, opacity: selectedForBatch.has(item.id) ? 1 : 0.5 }}
+                      >
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            selectedForBatch.has(item.id) 
+                              ? 'bg-primary border-primary' 
+                              : 'border-muted-foreground/50 bg-card/50'
+                          }`}
+                        >
+                          {selectedForBatch.has(item.id) && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-foreground" />
+                            </motion.div>
+                          )}
+                        </div>
+                      </motion.div>
+
                       <div className="flex gap-4 p-4">
                         {/* Thumbnail */}
                         <motion.div 
-                          className="relative w-24 h-28 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer"
-                          onClick={() => {
+                          className="relative w-24 h-28 rounded-xl overflow-hidden flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             playSound('preview');
                             setSelectedImage(item);
                           }}
@@ -324,7 +512,16 @@ const HistorySection = ({ isOpen, onClose }: HistorySectionProps) => {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                          <motion.button
+                            onClick={() => handleRegenerate(item)}
+                            className="p-2 rounded-lg bg-secondary/20 text-secondary hover:bg-secondary hover:text-secondary-foreground transition-colors"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            title="Regenerate with same settings"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </motion.button>
                           <motion.button
                             onClick={() => handleDownload(item.image_url, index)}
                             className="p-2 rounded-lg bg-primary/20 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
@@ -410,15 +607,29 @@ const HistorySection = ({ isOpen, onClose }: HistorySectionProps) => {
                     )}
                   </motion.div>
 
-                  {/* Close button */}
-                  <motion.button
-                    className="absolute -top-4 -right-4 p-2 rounded-full bg-card text-foreground"
-                    onClick={() => setSelectedImage(null)}
-                    whileHover={{ scale: 1.1, rotate: 90 }}
-                    whileTap={{ scale: 0.9 }}
+                  {/* Action buttons */}
+                  <motion.div
+                    className="absolute top-4 right-4 flex gap-2"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
                   >
-                    <X className="w-5 h-5" />
-                  </motion.button>
+                    <motion.button
+                      onClick={() => handleRegenerate(selectedImage)}
+                      className="p-2.5 rounded-full bg-secondary/80 text-foreground backdrop-blur-sm"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                    </motion.button>
+                    <motion.button
+                      className="p-2.5 rounded-full bg-card/80 text-foreground backdrop-blur-sm"
+                      onClick={() => setSelectedImage(null)}
+                      whileHover={{ scale: 1.1, rotate: 90 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <X className="w-5 h-5" />
+                    </motion.button>
+                  </motion.div>
                 </motion.div>
               </motion.div>
             )}
