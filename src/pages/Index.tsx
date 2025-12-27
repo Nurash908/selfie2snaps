@@ -540,6 +540,7 @@ const Index = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="space-y-6"
+            >
               {/* Personalized Greeting */}
               <PersonalizedGreeting />
               
@@ -833,7 +834,7 @@ const Index = () => {
       {/* Modals */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
       <FavoritesSection isOpen={showFavorites} onClose={() => setShowFavorites(false)} />
-      <HistorySection isOpen={showHistory} onClose={() => setShowHistory(false)} />
+      <HistorySection isOpen={showHistory} onClose={() => setShowHistory(false)} onRegenerate={handleRegenerateFromHistory} />
       <AnimatePresence>
         {showPreview && (
           <PreviewGallery
