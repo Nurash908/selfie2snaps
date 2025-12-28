@@ -312,29 +312,10 @@ const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
               </AnimatePresence>
             </div>
 
-            {/* Footer with External Link */}
+            {/* Footer */}
             <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-border/20 bg-background/50 backdrop-blur-sm">
-              <motion.a
-                href="https://selfie2snap.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl font-mono text-sm transition-all"
-                style={{
-                  background: "linear-gradient(135deg, hsl(180 70% 40% / 0.2), hsl(200 80% 50% / 0.2))",
-                  border: "1px solid hsl(180 70% 50% / 0.3)",
-                }}
-                whileHover={{ 
-                  scale: 1.02,
-                  boxShadow: "0 8px 32px hsl(180 70% 50% / 0.2)",
-                }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Sparkles className="w-4 h-4 text-cyan-400" />
-                <span className="text-foreground">Try SelfieSnaps App</span>
-                <ExternalLink className="w-4 h-4 text-cyan-400" />
-              </motion.a>
-              <p className="text-center text-xs text-muted-foreground mt-2">
-                Our sister app • Transform portraits with AI magic
+              <p className="text-center text-xs text-muted-foreground">
+                Selfie2Snap • Powered by Nano Banana AI 🍌
               </p>
             </div>
           </motion.div>
