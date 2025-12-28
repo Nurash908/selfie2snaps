@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
-import { Heart, User as UserIcon, LogOut, History } from "lucide-react";
+import { Heart, User as UserIcon, LogOut, History, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import BananaLogo from "@/components/BananaLogo";
@@ -33,7 +33,7 @@ import StyleSelector from "@/components/StyleSelector";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import Floating3DElement from "@/components/Floating3DElement";
 import MorphingBlob from "@/components/MorphingBlob";
-import ThemeToggle from "@/components/ThemeToggle";
+import SettingsPanel from "@/components/SettingsPanel";
 import GenerationNotification from "@/components/GenerationNotification";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -58,6 +58,7 @@ const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   
   const handleRegenerateFromHistory = (settings: { style: string; scene: string; ratio: string }) => {
     setSelectedStyle(settings.style);
@@ -345,10 +346,25 @@ const Index = () => {
         }}
       />
 
-      {/* Auth, History & Favorites buttons */}
+      {/* Auth, History, Favorites & Settings buttons */}
       <div className="fixed top-4 right-4 z-40 flex gap-2">
-        {/* Theme Toggle */}
-        <ThemeToggle onToggle={() => playSound("click")} />
+        {/* Settings Button */}
+        <motion.button
+          onClick={() => {
+            playSound("click");
+            setShowSettings(true);
+          }}
+          className="p-3 rounded-full backdrop-blur-xl border border-border/30 relative overflow-hidden group"
+          style={{ background: "hsl(250 25% 12% / 0.8)" }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <motion.div
+            className="absolute inset-0 opacity-0 group-hover:opacity-100"
+            style={{ background: "radial-gradient(circle, hsl(270 95% 65% / 0.2), transparent)" }}
+          />
+          <Settings className="w-5 h-5 text-muted-foreground" />
+        </motion.button>
         
         {user && (
           <>
@@ -853,6 +869,7 @@ const Index = () => {
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
       <FavoritesSection isOpen={showFavorites} onClose={() => setShowFavorites(false)} />
       <HistorySection isOpen={showHistory} onClose={() => setShowHistory(false)} onRegenerate={handleRegenerateFromHistory} />
+      <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <AnimatePresence>
         {showPreview && (
           <PreviewGallery
