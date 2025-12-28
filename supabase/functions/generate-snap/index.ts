@@ -6,12 +6,86 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Rate limiting configuration
+// ============= IMAGE SIZE VALIDATION =============
+const MAX_BASE64_SIZE_BYTES = 10 * 1024 * 1024; // 10MB max per image
+const MAX_BASE64_SIZE_CHARS = Math.ceil(MAX_BASE64_SIZE_BYTES * 1.37); // Base64 overhead ~37%
+
+function getBase64SizeInBytes(base64String: string): number {
+  // Remove data URL prefix if present
+  const base64Data = base64String.replace(/^data:image\/[a-z]+;base64,/, "");
+  // Calculate actual byte size from base64 length
+  const padding = (base64Data.match(/=+$/) || [""])[0].length;
+  return Math.floor((base64Data.length * 3) / 4) - padding;
+}
+
+function validateImageSize(imageData: string, fieldName: string): { valid: boolean; error?: string; sizeBytes?: number } {
+  if (imageData.startsWith("https://")) {
+    return { valid: true }; // URL references don't need size validation
+  }
+  
+  if (imageData.length > MAX_BASE64_SIZE_CHARS) {
+    return { 
+      valid: false, 
+      error: `${fieldName} exceeds maximum size. Image must be under 10MB.`,
+      sizeBytes: getBase64SizeInBytes(imageData)
+    };
+  }
+  
+  const sizeBytes = getBase64SizeInBytes(imageData);
+  if (sizeBytes > MAX_BASE64_SIZE_BYTES) {
+    return { 
+      valid: false, 
+      error: `${fieldName} is ${(sizeBytes / 1024 / 1024).toFixed(2)}MB, exceeds 10MB limit.`,
+      sizeBytes
+    };
+  }
+  
+  return { valid: true, sizeBytes };
+}
+
+// ============= REQUEST LOGGING & ANALYTICS =============
+interface RequestLog {
+  timestamp: string;
+  requestId: string;
+  clientIP: string;
+  method: string;
+  userAgent: string;
+  params: {
+    ratio?: string;
+    frameCount?: number;
+    scene?: string;
+    style?: string;
+    swapPositions?: boolean;
+    image1SizeKB?: number;
+    image2SizeKB?: number;
+  };
+  rateLimitRemaining: number;
+  durationMs?: number;
+  status: "started" | "success" | "error" | "rate_limited" | "validation_failed" | "image_too_large";
+  errorMessage?: string;
+  framesGenerated?: number;
+}
+
+function generateRequestId(): string {
+  return `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+function logRequest(log: RequestLog) {
+  // Structured logging for analytics and monitoring
+  console.log(JSON.stringify({
+    type: "edge_function_request",
+    function: "generate-snap",
+    ...log,
+    // Mask IP for privacy in logs
+    clientIP: log.clientIP ? log.clientIP.substring(0, 8) + "***" : "unknown"
+  }));
+}
+
+// ============= RATE LIMITING =============
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute window
 const MAX_REQUESTS_PER_WINDOW = 10; // Max 10 requests per minute per IP
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
-// Clean up expired rate limit entries periodically
 function cleanupRateLimitStore() {
   const now = Date.now();
   for (const [key, value] of rateLimitStore.entries()) {
@@ -21,7 +95,6 @@ function cleanupRateLimitStore() {
   }
 }
 
-// Check and update rate limit for a given identifier
 function checkRateLimit(identifier: string): { allowed: boolean; remaining: number; resetIn: number } {
   cleanupRateLimitStore();
   
@@ -29,7 +102,6 @@ function checkRateLimit(identifier: string): { allowed: boolean; remaining: numb
   const record = rateLimitStore.get(identifier);
   
   if (!record || now > record.resetTime) {
-    // New window
     rateLimitStore.set(identifier, {
       count: 1,
       resetTime: now + RATE_LIMIT_WINDOW_MS
@@ -45,7 +117,7 @@ function checkRateLimit(identifier: string): { allowed: boolean; remaining: numb
   return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW - record.count, resetIn: record.resetTime - now };
 }
 
-// Input validation schema using Zod
+// ============= INPUT VALIDATION =============
 const requestSchema = z.object({
   image1: z.string()
     .min(1, "image1 is required")
@@ -76,22 +148,37 @@ const requestSchema = z.object({
 });
 
 serve(async (req) => {
+  const startTime = Date.now();
+  const requestId = generateRequestId();
+  
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Get client info for logging
+  const clientIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
+    || req.headers.get("x-real-ip") 
+    || "unknown";
+  const userAgent = req.headers.get("user-agent") || "unknown";
+
   try {
-    // Get client identifier for rate limiting (use forwarded IP or fallback)
-    const clientIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
-      || req.headers.get("x-real-ip") 
-      || "unknown";
-    
     // Check rate limit
     const rateLimitResult = checkRateLimit(clientIP);
     
     if (!rateLimitResult.allowed) {
-      console.warn(`Rate limit exceeded for IP: ${clientIP}`);
+      logRequest({
+        timestamp: new Date().toISOString(),
+        requestId,
+        clientIP,
+        method: req.method,
+        userAgent,
+        params: {},
+        rateLimitRemaining: 0,
+        durationMs: Date.now() - startTime,
+        status: "rate_limited"
+      });
+      
       return new Response(
         JSON.stringify({
           error: "Rate limit exceeded. Please try again later.",
@@ -105,7 +192,8 @@ serve(async (req) => {
             "Content-Type": "application/json",
             "Retry-After": String(Math.ceil(rateLimitResult.resetIn / 1000)),
             "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": String(Math.ceil(rateLimitResult.resetIn / 1000))
+            "X-RateLimit-Reset": String(Math.ceil(rateLimitResult.resetIn / 1000)),
+            "X-Request-Id": requestId
           } 
         }
       );
@@ -116,13 +204,25 @@ serve(async (req) => {
     try {
       requestBody = await req.json();
     } catch {
-      console.error("Failed to parse JSON body");
+      logRequest({
+        timestamp: new Date().toISOString(),
+        requestId,
+        clientIP,
+        method: req.method,
+        userAgent,
+        params: {},
+        rateLimitRemaining: rateLimitResult.remaining,
+        durationMs: Date.now() - startTime,
+        status: "validation_failed",
+        errorMessage: "Invalid JSON in request body"
+      });
+      
       return new Response(
         JSON.stringify({
           error: "Invalid JSON in request body",
           success: false,
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Request-Id": requestId } }
       );
     }
 
@@ -134,32 +234,105 @@ serve(async (req) => {
         field: e.path.join("."),
         message: e.message
       }));
-      console.error("Validation failed:", errors);
+      
+      logRequest({
+        timestamp: new Date().toISOString(),
+        requestId,
+        clientIP,
+        method: req.method,
+        userAgent,
+        params: {},
+        rateLimitRemaining: rateLimitResult.remaining,
+        durationMs: Date.now() - startTime,
+        status: "validation_failed",
+        errorMessage: `Validation failed: ${errors.map(e => e.message).join(", ")}`
+      });
+      
       return new Response(
         JSON.stringify({
           error: "Validation failed",
           details: errors,
           success: false,
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Request-Id": requestId } }
       );
     }
 
     const { image1, image2, ratio, frameCount, scene, swapPositions, style } = validationResult.data;
+
+    // Validate image sizes
+    const image1Validation = validateImageSize(image1, "image1");
+    if (!image1Validation.valid) {
+      logRequest({
+        timestamp: new Date().toISOString(),
+        requestId,
+        clientIP,
+        method: req.method,
+        userAgent,
+        params: { ratio, frameCount, scene, style, swapPositions, image1SizeKB: image1Validation.sizeBytes ? Math.round(image1Validation.sizeBytes / 1024) : undefined },
+        rateLimitRemaining: rateLimitResult.remaining,
+        durationMs: Date.now() - startTime,
+        status: "image_too_large",
+        errorMessage: image1Validation.error
+      });
+      
+      return new Response(
+        JSON.stringify({
+          error: image1Validation.error,
+          success: false,
+        }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Request-Id": requestId } }
+      );
+    }
+
+    const image2Validation = validateImageSize(image2, "image2");
+    if (!image2Validation.valid) {
+      logRequest({
+        timestamp: new Date().toISOString(),
+        requestId,
+        clientIP,
+        method: req.method,
+        userAgent,
+        params: { ratio, frameCount, scene, style, swapPositions, image2SizeKB: image2Validation.sizeBytes ? Math.round(image2Validation.sizeBytes / 1024) : undefined },
+        rateLimitRemaining: rateLimitResult.remaining,
+        durationMs: Date.now() - startTime,
+        status: "image_too_large",
+        errorMessage: image2Validation.error
+      });
+      
+      return new Response(
+        JSON.stringify({
+          error: image2Validation.error,
+          success: false,
+        }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Request-Id": requestId } }
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating combined snap with validated params:", { 
-      ratio, 
-      frameCount, 
-      scene, 
-      swapPositions, 
-      style,
-      clientIP: clientIP.substring(0, 8) + "***", // Log partial IP for debugging
-      rateLimitRemaining: rateLimitResult.remaining
+    // Log request start with analytics
+    logRequest({
+      timestamp: new Date().toISOString(),
+      requestId,
+      clientIP,
+      method: req.method,
+      userAgent,
+      params: {
+        ratio,
+        frameCount,
+        scene,
+        style,
+        swapPositions,
+        image1SizeKB: image1Validation.sizeBytes ? Math.round(image1Validation.sizeBytes / 1024) : undefined,
+        image2SizeKB: image2Validation.sizeBytes ? Math.round(image2Validation.sizeBytes / 1024) : undefined
+      },
+      rateLimitRemaining: rateLimitResult.remaining,
+      status: "started"
     });
 
     // Scene descriptions for the AI
@@ -311,7 +484,19 @@ IMPORTANT:
       }
     }
 
-    console.log(`Generated ${frames.length} frames successfully`);
+    // Log successful completion
+    logRequest({
+      timestamp: new Date().toISOString(),
+      requestId,
+      clientIP,
+      method: req.method,
+      userAgent,
+      params: { ratio, frameCount, scene, style, swapPositions },
+      rateLimitRemaining: rateLimitResult.remaining,
+      durationMs: Date.now() - startTime,
+      status: "success",
+      framesGenerated: frames.length
+    });
 
     return new Response(
       JSON.stringify({
@@ -324,12 +509,26 @@ IMPORTANT:
           ...corsHeaders, 
           "Content-Type": "application/json",
           "X-RateLimit-Remaining": String(rateLimitResult.remaining),
-          "X-RateLimit-Reset": String(Math.ceil(rateLimitResult.resetIn / 1000))
+          "X-RateLimit-Reset": String(Math.ceil(rateLimitResult.resetIn / 1000)),
+          "X-Request-Id": requestId
         } 
       }
     );
   } catch (error) {
-    console.error("Error in generate-snap:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    logRequest({
+      timestamp: new Date().toISOString(),
+      requestId,
+      clientIP,
+      method: req.method,
+      userAgent,
+      params: {},
+      rateLimitRemaining: 0,
+      durationMs: Date.now() - startTime,
+      status: "error",
+      errorMessage
+    });
     
     if (error instanceof Error && error.message.includes("429")) {
       return new Response(
@@ -337,16 +536,16 @@ IMPORTANT:
           error: "Rate limit exceeded. Please try again in a moment.",
           success: false,
         }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Request-Id": requestId } }
       );
     }
 
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
         success: false,
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Request-Id": requestId } }
     );
   }
 });
