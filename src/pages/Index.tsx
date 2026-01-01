@@ -81,12 +81,29 @@ const Index = () => {
   // Map background selector IDs to valid edge function scene values
   const mapBackgroundToScene = (background: string): string => {
     const sceneMapping: Record<string, string> = {
+      // Beach scenes
       "sunset-beach": "beach",
+      "tropical-paradise": "beach",
+      // City scenes
       "city-night": "city",
+      "tokyo-neon": "city",
+      // Mountain scenes
       "mountains": "mountains",
+      "snowy-peaks": "mountains",
+      // Natural scenes
       "forest": "natural",
+      "autumn-woods": "natural",
+      "cherry-blossom": "natural",
+      "northern-lights": "natural",
+      "desert-dunes": "natural",
+      "underwater": "natural",
+      // Studio scenes
       "studio-gradient": "studio",
+      "studio-blue": "studio",
+      // Party scenes
       "neon-party": "party",
+      "club-lights": "party",
+      // Direct mappings
       "natural": "natural",
       "beach": "beach",
       "city": "city",
