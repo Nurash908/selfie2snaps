@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2, Twitter, Facebook, Instagram, Link, Check, Sparkles, Loader2 } from 'lucide-react';
+import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2, Twitter, Facebook, Instagram, Link, Check, Sparkles, Loader2, Archive } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { toast } from 'sonner';
+import JSZip from 'jszip';
 
 interface PreviewGalleryProps {
   frames: string[];
@@ -20,6 +21,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState(false);
   const [savingFavorite, setSavingFavorite] = useState(false);
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
@@ -95,6 +97,40 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
       toast.error('Failed to download');
     } finally {
       setDownloadingIndex(null);
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    if (frames.length === 0) return;
+    
+    playSound('download');
+    setDownloadingAll(true);
+    
+    try {
+      const zip = new JSZip();
+      
+      for (let i = 0; i < frames.length; i++) {
+        const response = await fetch(frames[i]);
+        const blob = await response.blob();
+        zip.file(`selfie2snap-${i + 1}.jpg`, blob);
+      }
+      
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `selfie2snap-all-${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Downloaded ${frames.length} frames as zip! 🎉`);
+    } catch (error) {
+      console.error('Error creating zip:', error);
+      toast.error('Failed to create zip file');
+    } finally {
+      setDownloadingAll(false);
     }
   };
 
@@ -506,6 +542,27 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
                 </span>
               </motion.button>
             )}
+            
+            {/* Download All as Zip Button */}
+            {frames.length > 1 && (
+              <motion.button
+                className="p-2 sm:p-3 rounded-xl font-medium flex items-center gap-1 sm:gap-2 text-xs sm:text-sm bg-card/60 text-muted-foreground hover:bg-card/80 hover:text-foreground"
+                onClick={handleDownloadAll}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                disabled={downloadingAll}
+              >
+                {downloadingAll ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Archive className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {downloadingAll ? 'Zipping...' : 'Download All'}
+                </span>
+              </motion.button>
+            )}
+            
             {/* Favorite Button */}
             <motion.button
               className={`p-3 rounded-xl font-medium flex items-center gap-2 relative overflow-hidden ${
