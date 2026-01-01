@@ -18,7 +18,8 @@ import {
   TreePine,
   Camera,
   PartyPopper,
-  Clock
+  Clock,
+  Heart
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -26,6 +27,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 
 const RECENTLY_USED_KEY = "snap-recently-used-backgrounds";
+const FAVORITES_KEY = "snap-favorite-backgrounds";
 const MAX_RECENT = 5;
 
 interface BackgroundSelectorProps {
@@ -178,6 +180,7 @@ const BackgroundSelector = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<BackgroundCategory>("all");
   const [recentlyUsed, setRecentlyUsed] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playSound } = useSoundEffects();
 
@@ -193,6 +196,18 @@ const BackgroundSelector = ({
     }
   }, []);
 
+  // Load favorites from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(FAVORITES_KEY);
+    if (stored) {
+      try {
+        setFavorites(JSON.parse(stored));
+      } catch {
+        setFavorites([]);
+      }
+    }
+  }, []);
+
   // Add background to recently used
   const addToRecentlyUsed = useCallback((bgId: string) => {
     setRecentlyUsed((prev) => {
@@ -203,12 +218,46 @@ const BackgroundSelector = ({
     });
   }, []);
 
+  // Toggle favorite
+  const toggleFavorite = useCallback((bgId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavorites((prev) => {
+      const isFavorite = prev.includes(bgId);
+      const updated = isFavorite 
+        ? prev.filter((id) => id !== bgId)
+        : [...prev, bgId];
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    playSound("click");
+    const bg = stockBackgrounds.find((b) => b.id === bgId);
+    if (bg) {
+      const isFavorite = favorites.includes(bgId);
+      toast.success(isFavorite ? `Removed "${bg.label}" from favorites` : `Added "${bg.label}" to favorites`);
+    }
+  }, [playSound, favorites]);
+
+  // Clear all favorites
+  const clearFavorites = useCallback(() => {
+    setFavorites([]);
+    localStorage.removeItem(FAVORITES_KEY);
+    playSound("click");
+    toast.success("Favorites cleared");
+  }, [playSound]);
+
   // Get recently used background objects
   const recentBackgrounds = useMemo(() => {
     return recentlyUsed
       .map((id) => stockBackgrounds.find((bg) => bg.id === id))
       .filter((bg): bg is typeof stockBackgrounds[0] => bg !== undefined);
   }, [recentlyUsed]);
+
+  // Get favorite background objects
+  const favoriteBackgrounds = useMemo(() => {
+    return favorites
+      .map((id) => stockBackgrounds.find((bg) => bg.id === id))
+      .filter((bg): bg is typeof stockBackgrounds[0] => bg !== undefined);
+  }, [favorites]);
 
   // Filter backgrounds based on search and category
   const filteredBackgrounds = useMemo(() => {
@@ -398,6 +447,77 @@ const BackgroundSelector = ({
               })}
             </div>
 
+            {/* Favorites Section */}
+            {favoriteBackgrounds.length > 0 && !searchQuery && activeCategory === "all" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Heart className="w-3 h-3 text-destructive fill-destructive" />
+                    <span>Favorites</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/20 text-destructive">
+                      {favoriteBackgrounds.length}
+                    </span>
+                  </div>
+                  <motion.button
+                    onClick={clearFavorites}
+                    className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <X className="w-3 h-3" />
+                    Clear
+                  </motion.button>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  {favoriteBackgrounds.map((bg) => {
+                    const isSelected = selected === bg.id;
+                    return (
+                      <motion.button
+                        key={`fav-${bg.id}`}
+                        onClick={() => {
+                          playSound("click");
+                          onSelect(bg.id, "preset");
+                          addToRecentlyUsed(bg.id);
+                        }}
+                        className={`relative flex-shrink-0 w-16 aspect-[4/3] rounded-lg overflow-hidden ${
+                          isSelected ? "ring-2 ring-primary" : ""
+                        }`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <img
+                          src={bg.preview}
+                          alt={bg.label}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                        <span className="absolute bottom-0.5 left-0.5 right-0.5 text-[8px] font-medium text-foreground truncate">
+                          {bg.label}
+                        </span>
+                        <motion.button
+                          onClick={(e) => toggleFavorite(bg.id, e)}
+                          className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-background/60 flex items-center justify-center"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <Heart className="w-2.5 h-2.5 text-destructive fill-destructive" />
+                        </motion.button>
+                        {isSelected && (
+                          <motion.div
+                            className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-primary flex items-center justify-center"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                          >
+                            <Check className="w-2 h-2 text-primary-foreground" />
+                          </motion.div>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Recently Used Section */}
             {recentBackgrounds.length > 0 && !searchQuery && activeCategory === "all" && (
               <div className="space-y-2">
@@ -424,6 +544,7 @@ const BackgroundSelector = ({
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                   {recentBackgrounds.map((bg) => {
                     const isSelected = selected === bg.id;
+                    const isFavorite = favorites.includes(bg.id);
                     return (
                       <motion.button
                         key={`recent-${bg.id}`}
@@ -447,9 +568,17 @@ const BackgroundSelector = ({
                         <span className="absolute bottom-0.5 left-0.5 right-0.5 text-[8px] font-medium text-foreground truncate">
                           {bg.label}
                         </span>
+                        <motion.button
+                          onClick={(e) => toggleFavorite(bg.id, e)}
+                          className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-background/60 flex items-center justify-center"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <Heart className={`w-2.5 h-2.5 ${isFavorite ? "text-destructive fill-destructive" : "text-muted-foreground"}`} />
+                        </motion.button>
                         {isSelected && (
                           <motion.div
-                            className="absolute top-0.5 right-0.5 w-3 h-3 rounded-full bg-primary flex items-center justify-center"
+                            className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-primary flex items-center justify-center"
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                           >
@@ -468,6 +597,7 @@ const BackgroundSelector = ({
               <div className="grid grid-cols-3 gap-2">
                 {filteredBackgrounds.map((bg) => {
                   const isSelected = selected === bg.id;
+                  const isFavorite = favorites.includes(bg.id);
                   return (
                     <motion.button
                       key={bg.id}
@@ -489,12 +619,21 @@ const BackgroundSelector = ({
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                      <span className="absolute bottom-1 left-1 right-1 text-[10px] font-medium text-foreground truncate">
+                      <span className="absolute bottom-1 left-1 right-4 text-[10px] font-medium text-foreground truncate">
                         {bg.label}
                       </span>
+                      {/* Favorite button */}
+                      <motion.button
+                        onClick={(e) => toggleFavorite(bg.id, e)}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-background/60 flex items-center justify-center hover:bg-background/80 transition-colors"
+                        whileHover={{ scale: 1.15 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <Heart className={`w-3 h-3 transition-colors ${isFavorite ? "text-destructive fill-destructive" : "text-muted-foreground hover:text-destructive"}`} />
+                      </motion.button>
                       {isSelected && (
                         <motion.div
-                          className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center"
+                          className="absolute top-1 left-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center"
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                         >
