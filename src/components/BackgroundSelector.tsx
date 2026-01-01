@@ -401,9 +401,25 @@ const BackgroundSelector = ({
             {/* Recently Used Section */}
             {recentBackgrounds.length > 0 && !searchQuery && activeCategory === "all" && (
               <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Clock className="w-3 h-3" />
-                  <span>Recently Used</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Clock className="w-3 h-3" />
+                    <span>Recently Used</span>
+                  </div>
+                  <motion.button
+                    onClick={() => {
+                      playSound("click");
+                      setRecentlyUsed([]);
+                      localStorage.removeItem(RECENTLY_USED_KEY);
+                      toast.success("Recently used cleared");
+                    }}
+                    className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <X className="w-3 h-3" />
+                    Clear
+                  </motion.button>
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                   {recentBackgrounds.map((bg) => {
