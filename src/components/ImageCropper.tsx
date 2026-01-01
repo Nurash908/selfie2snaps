@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, RotateCcw, ZoomIn, ZoomOut, Move } from "lucide-react";
+import { X, Check, RotateCcw, ZoomIn, ZoomOut, Move, Maximize2, Minimize2 } from "lucide-react";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 interface ImageCropperProps {
@@ -16,13 +16,20 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [cropSize, setCropSize] = useState<"small" | "medium" | "large">("medium");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const { playSound } = useSoundEffects();
 
-  const cropWidth = 240;
-  const cropHeight = cropWidth / aspectRatio;
+  // Dynamic crop size based on selection
+  const cropSizes = {
+    small: { width: 180, height: 180 / aspectRatio },
+    medium: { width: 240, height: 240 / aspectRatio },
+    large: { width: 300, height: 300 / aspectRatio },
+  };
+
+  const { width: cropWidth, height: cropHeight } = cropSizes[cropSize];
 
   useEffect(() => {
     const img = new Image();
@@ -72,18 +79,25 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
 
   const handleZoomIn = () => {
     playSound("click");
-    setScale(Math.min(scale + 0.1, 3));
+    setScale(Math.min(scale + 0.2, 4)); // Extended max zoom
   };
 
   const handleZoomOut = () => {
     playSound("click");
-    setScale(Math.max(scale - 0.1, 0.5));
+    setScale(Math.max(scale - 0.2, 0.3)); // Extended min zoom
   };
 
   const handleReset = () => {
     playSound("reset");
     setScale(1);
     setPosition({ x: 0, y: 0 });
+  };
+
+  const handleCycleCropSize = () => {
+    playSound("click");
+    const sizes: ("small" | "medium" | "large")[] = ["small", "medium", "large"];
+    const currentIndex = sizes.indexOf(cropSize);
+    setCropSize(sizes[(currentIndex + 1) % sizes.length]);
   };
 
   const handleCrop = () => {
@@ -141,6 +155,8 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
     onCropComplete(croppedDataUrl);
   };
 
+  const zoomPercentage = Math.round(scale * 100);
+
   return (
     <AnimatePresence>
       <motion.div
@@ -167,7 +183,10 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border/30">
-            <h3 className="text-sm font-mono tracking-wider text-foreground">CROP IMAGE</h3>
+            <div>
+              <h3 className="text-sm font-mono tracking-wider text-foreground">CROP IMAGE</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Zoom: {zoomPercentage}%</p>
+            </div>
             <motion.button
               onClick={() => {
                 playSound("click");
@@ -237,7 +256,7 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
               </svg>
 
               {/* Crop frame */}
-              <div
+              <motion.div
                 className="absolute rounded-xl"
                 style={{
                   width: cropWidth,
@@ -246,7 +265,21 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
                   top: "50%",
                   transform: "translate(-50%, -50%)",
                   border: "2px solid hsl(270 95% 65%)",
-                  boxShadow: "0 0 0 9999px hsl(250 30% 5% / 0.7)",
+                  boxShadow: "0 0 0 9999px hsl(250 30% 5% / 0.7), 0 0 20px hsl(270 95% 65% / 0.3)",
+                }}
+                animate={{ 
+                  width: cropWidth, 
+                  height: cropHeight,
+                  boxShadow: [
+                    "0 0 0 9999px hsl(250 30% 5% / 0.7), 0 0 20px hsl(270 95% 65% / 0.3)",
+                    "0 0 0 9999px hsl(250 30% 5% / 0.7), 0 0 30px hsl(270 95% 65% / 0.5)",
+                    "0 0 0 9999px hsl(250 30% 5% / 0.7), 0 0 20px hsl(270 95% 65% / 0.3)",
+                  ]
+                }}
+                transition={{ 
+                  width: { type: "spring", stiffness: 300 },
+                  height: { type: "spring", stiffness: 300 },
+                  boxShadow: { duration: 2, repeat: Infinity }
                 }}
               >
                 {/* Grid lines */}
@@ -263,7 +296,7 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
                 {["top-left", "top-right", "bottom-left", "bottom-right"].map((corner) => (
                   <div
                     key={corner}
-                    className="absolute w-4 h-4"
+                    className="absolute w-5 h-5"
                     style={{
                       [corner.includes("top") ? "top" : "bottom"]: -2,
                       [corner.includes("left") ? "left" : "right"]: -2,
@@ -274,7 +307,17 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
                     }}
                   />
                 ))}
-              </div>
+
+                {/* Crop size indicator */}
+                <motion.div
+                  className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded text-[10px] font-mono"
+                  style={{ background: "hsl(270 95% 55% / 0.8)" }}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  {cropSize.toUpperCase()}
+                </motion.div>
+              </motion.div>
             </div>
 
             {/* Drag hint */}
@@ -293,7 +336,7 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
           {/* Controls */}
           <div className="p-4 space-y-4">
             {/* Zoom controls */}
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-3">
               <motion.button
                 onClick={handleZoomOut}
                 className="p-3 rounded-xl"
@@ -304,20 +347,30 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
                 <ZoomOut className="w-5 h-5 text-muted-foreground" />
               </motion.button>
 
-              {/* Zoom slider */}
-              <div className="flex-1 max-w-32">
+              {/* Enhanced zoom slider */}
+              <div className="flex-1 max-w-40 relative">
                 <input
                   type="range"
-                  min="0.5"
-                  max="3"
+                  min="0.3"
+                  max="4"
                   step="0.1"
                   value={scale}
                   onChange={(e) => setScale(parseFloat(e.target.value))}
-                  className="w-full h-1 rounded-full appearance-none cursor-pointer"
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer"
                   style={{
-                    background: `linear-gradient(to right, hsl(270 95% 65%) 0%, hsl(270 95% 65%) ${((scale - 0.5) / 2.5) * 100}%, hsl(250 20% 25%) ${((scale - 0.5) / 2.5) * 100}%, hsl(250 20% 25%) 100%)`,
+                    background: `linear-gradient(to right, hsl(270 95% 65%) 0%, hsl(270 95% 65%) ${((scale - 0.3) / 3.7) * 100}%, hsl(250 20% 25%) ${((scale - 0.3) / 3.7) * 100}%, hsl(250 20% 25%) 100%)`,
                   }}
                 />
+                {/* Zoom percentage tooltip */}
+                <motion.div
+                  className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[10px] font-mono"
+                  style={{ 
+                    background: "hsl(270 95% 55% / 0.8)",
+                    left: `${((scale - 0.3) / 3.7) * 100}%`,
+                  }}
+                >
+                  {zoomPercentage}%
+                </motion.div>
               </div>
 
               <motion.button
@@ -331,6 +384,21 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
               </motion.button>
 
               <motion.button
+                onClick={handleCycleCropSize}
+                className="p-3 rounded-xl"
+                style={{ background: "hsl(250 25% 18%)" }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Change crop size"
+              >
+                {cropSize === "large" ? (
+                  <Minimize2 className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <Maximize2 className="w-5 h-5 text-muted-foreground" />
+                )}
+              </motion.button>
+
+              <motion.button
                 onClick={handleReset}
                 className="p-3 rounded-xl"
                 style={{ background: "hsl(250 25% 18%)" }}
@@ -339,6 +407,33 @@ const ImageCropper = ({ image, onCropComplete, onCancel, aspectRatio = 3 / 4 }: 
               >
                 <RotateCcw className="w-5 h-5 text-muted-foreground" />
               </motion.button>
+            </div>
+
+            {/* Quick zoom buttons */}
+            <div className="flex justify-center gap-2">
+              {[50, 100, 150, 200, 300].map((zoom) => (
+                <motion.button
+                  key={zoom}
+                  onClick={() => {
+                    playSound("click");
+                    setScale(zoom / 100);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono ${
+                    Math.round(scale * 100) === zoom 
+                      ? "text-primary-foreground" 
+                      : "text-muted-foreground"
+                  }`}
+                  style={{ 
+                    background: Math.round(scale * 100) === zoom 
+                      ? "hsl(270 95% 55%)" 
+                      : "hsl(250 25% 15%)" 
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {zoom}%
+                </motion.button>
+              ))}
             </div>
 
             {/* Action buttons */}

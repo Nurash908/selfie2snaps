@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
-import { Heart, User as UserIcon, LogOut, History, Settings } from "lucide-react";
+import { Heart, User as UserIcon, LogOut, History, Settings, Palette } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import BananaLogo from "@/components/BananaLogo";
@@ -9,6 +9,7 @@ import PortraitCard from "@/components/PortraitCard";
 import FramesControl from "@/components/FramesControl";
 import RatioSelector from "@/components/RatioSelector";
 import SceneSelector from "@/components/SceneSelector";
+import BackgroundSelector from "@/components/BackgroundSelector";
 import PositionSwapToggle from "@/components/PositionSwapToggle";
 import GenerateButton from "@/components/GenerateButton";
 import FeatureCards from "@/components/FeatureCards";
@@ -30,6 +31,7 @@ import FloatingOrbs from "@/components/FloatingOrbs";
 import HolographicCard from "@/components/HolographicCard";
 import GlowingBorder from "@/components/GlowingBorder";
 import StyleSelector from "@/components/StyleSelector";
+import StylePreviewGallery from "@/components/StylePreviewGallery";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import Floating3DElement from "@/components/Floating3DElement";
 import MorphingBlob from "@/components/MorphingBlob";
@@ -57,6 +59,13 @@ const Index = () => {
   const [showFavorites, setShowFavorites] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showStylePreview, setShowStylePreview] = useState(false);
+  
+  // Background options state
+  const [backgroundType, setBackgroundType] = useState<"preset" | "custom" | "ai">("preset");
+  const [customBackground, setCustomBackground] = useState<string | null>(null);
+  const [aiBackground, setAiBackground] = useState<string | null>(null);
+  
   const handleRegenerateFromHistory = (settings: {
     style: string;
     scene: string;
@@ -65,6 +74,18 @@ const Index = () => {
     setSelectedStyle(settings.style);
     setSelectedScene(settings.scene);
     setSelectedRatio(settings.ratio);
+  };
+  
+  const handleBackgroundSelect = (background: string, type: "preset" | "custom" | "ai") => {
+    setBackgroundType(type);
+    if (type === "preset") {
+      setSelectedScene(background);
+    }
+  };
+  
+  const handleStylePreviewSelect = (style: string) => {
+    setSelectedStyle(style);
+    // Regenerate with new style would go here
   };
   const [showPreview, setShowPreview] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -696,7 +717,14 @@ const Index = () => {
             }} className="space-y-6 overflow-hidden">
                     <HolographicCard>
                       <div className="p-5 space-y-6">
-                        <SceneSelector selected={selectedScene} onSelect={setSelectedScene} />
+                        <BackgroundSelector 
+                          selected={selectedScene} 
+                          onSelect={handleBackgroundSelect}
+                          customBackground={customBackground}
+                          onCustomUpload={setCustomBackground}
+                          aiBackground={aiBackground}
+                          onAiGenerate={setAiBackground}
+                        />
                         <StyleSelector selected={selectedStyle} onSelect={setSelectedStyle} />
                         <PositionSwapToggle isSwapped={swapPositions} onToggle={() => setSwapPositions(!swapPositions)} />
                         <FramesControl value={frameCount} onChange={setFrameCount} min={1} max={2} />
@@ -754,7 +782,7 @@ const Index = () => {
               <FilmStrip frames={generatedFrames} onBless={() => toast.success("Blessings sent! 💛")} />
 
               <div className="flex flex-col items-center gap-4">
-                <div className="flex justify-center gap-3">
+                <div className="flex justify-center gap-3 flex-wrap">
                   <motion.button onClick={() => {
                 playSound("preview");
                 setShowPreview(true);
@@ -778,6 +806,24 @@ const Index = () => {
                   repeatDelay: 3
                 }} />
                     <span className="relative z-10">Preview All</span>
+                  </motion.button>
+                  
+                  {/* Try Different Styles button */}
+                  <motion.button onClick={() => {
+                playSound("click");
+                setShowStylePreview(true);
+              }} className="px-5 py-3 rounded-xl font-mono text-sm tracking-wider flex items-center gap-2 relative overflow-hidden" style={{
+                background: "hsl(250 25% 15%)",
+                border: "1px solid hsl(270 95% 65% / 0.3)",
+              }} whileHover={{
+                scale: 1.05,
+                borderColor: "hsl(270 95% 65% / 0.6)",
+                boxShadow: "0 8px 24px hsl(270 95% 55% / 0.2)"
+              }} whileTap={{
+                scale: 0.95
+              }}>
+                    <Palette className="w-4 h-4 text-primary" />
+                    <span className="text-muted-foreground">Try Styles</span>
                   </motion.button>
                 </div>
 
@@ -821,6 +867,17 @@ const Index = () => {
       <AnimatePresence>
         {showPreview && <PreviewGallery frames={generatedFrames} vibe={selectedRatio} onClose={() => setShowPreview(false)} onOpenAuth={() => setShowAuthModal(true)} />}
       </AnimatePresence>
+      
+      {/* Style Preview Gallery */}
+      {generatedFrames.length > 0 && (
+        <StylePreviewGallery
+          isOpen={showStylePreview}
+          onClose={() => setShowStylePreview(false)}
+          currentFrame={generatedFrames[0]}
+          currentStyle={selectedStyle}
+          onStyleSelect={handleStylePreviewSelect}
+        />
+      )}
       
       {/* Tutorial Overlay */}
       {showTutorial && <TutorialOverlay onComplete={() => setShowTutorial(false)} />}
