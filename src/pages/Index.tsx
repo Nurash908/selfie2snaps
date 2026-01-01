@@ -918,7 +918,15 @@ const Index = () => {
       <HistorySection isOpen={showHistory} onClose={() => setShowHistory(false)} onRegenerate={handleRegenerateFromHistory} />
       <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <AnimatePresence>
-        {showPreview && <PreviewGallery frames={generatedFrames} vibe={selectedRatio} onClose={() => setShowPreview(false)} onOpenAuth={() => setShowAuthModal(true)} />}
+        {showPreview && <PreviewGallery 
+          frames={generatedFrames} 
+          vibe={selectedRatio} 
+          onClose={() => setShowPreview(false)} 
+          onOpenAuth={() => setShowAuthModal(true)}
+          onDeleteFrames={(indices) => {
+            setGeneratedFrames(prev => prev.filter((_, i) => !indices.includes(i)));
+          }}
+        />}
       </AnimatePresence>
       
       {/* Style Preview Gallery */}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2, Twitter, Facebook, Instagram, Link, Check, Sparkles, Loader2, Archive, CheckSquare, Square } from 'lucide-react';
+import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2, Twitter, Facebook, Instagram, Link, Check, Sparkles, Loader2, Archive, CheckSquare, Square, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
@@ -12,9 +12,10 @@ interface PreviewGalleryProps {
   vibe: string;
   onClose: () => void;
   onOpenAuth: () => void;
+  onDeleteFrames?: (indices: number[]) => void;
 }
 
-const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryProps) => {
+const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth, onDeleteFrames }: PreviewGalleryProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -665,6 +666,43 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
                 )}
                 <span className="hidden sm:inline">
                   {selectedFrames.size === frames.length ? 'None' : 'All'}
+                </span>
+              </motion.button>
+            )}
+            
+            {/* Delete Selected Button (only in select mode) */}
+            {selectMode && onDeleteFrames && (
+              <motion.button
+                className="p-2 sm:p-3 rounded-xl font-medium flex items-center gap-1 sm:gap-2 text-xs sm:text-sm bg-destructive/20 text-destructive hover:bg-destructive/30 border border-destructive/30"
+                onClick={() => {
+                  if (selectedFrames.size === 0) {
+                    toast.error('No frames selected');
+                    return;
+                  }
+                  if (selectedFrames.size === frames.length) {
+                    toast.error('Cannot delete all frames');
+                    return;
+                  }
+                  playSound('click');
+                  const indicesToDelete = Array.from(selectedFrames).sort((a, b) => b - a);
+                  onDeleteFrames(indicesToDelete);
+                  // Adjust current index if needed
+                  if (currentIndex >= frames.length - selectedFrames.size) {
+                    setCurrentIndex(Math.max(0, frames.length - selectedFrames.size - 1));
+                  }
+                  setSelectMode(false);
+                  setSelectedFrames(new Set());
+                  toast.success(`Deleted ${indicesToDelete.length} frame${indicesToDelete.length > 1 ? 's' : ''}`);
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                disabled={selectedFrames.size === 0 || selectedFrames.size === frames.length}
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">
+                  Delete ({selectedFrames.size})
                 </span>
               </motion.button>
             )}
