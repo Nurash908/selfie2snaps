@@ -6,6 +6,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface PreviewGalleryProps {
   frames: string[];
@@ -27,6 +37,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth, onDeleteFrames }: P
   const [savingFavorite, setSavingFavorite] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
 
@@ -684,15 +695,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth, onDeleteFrames }: P
                     return;
                   }
                   playSound('click');
-                  const indicesToDelete = Array.from(selectedFrames).sort((a, b) => b - a);
-                  onDeleteFrames(indicesToDelete);
-                  // Adjust current index if needed
-                  if (currentIndex >= frames.length - selectedFrames.size) {
-                    setCurrentIndex(Math.max(0, frames.length - selectedFrames.size - 1));
-                  }
-                  setSelectMode(false);
-                  setSelectedFrames(new Set());
-                  toast.success(`Deleted ${indicesToDelete.length} frame${indicesToDelete.length > 1 ? 's' : ''}`);
+                  setShowDeleteConfirm(true);
                 }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -706,6 +709,37 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth, onDeleteFrames }: P
                 </span>
               </motion.button>
             )}
+            
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+              <AlertDialogContent className="bg-card border-border">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {selectedFrames.size} frame{selectedFrames.size > 1 ? 's' : ''}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. The selected frame{selectedFrames.size > 1 ? 's' : ''} will be permanently removed from this gallery.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => {
+                      const indicesToDelete = Array.from(selectedFrames).sort((a, b) => b - a);
+                      onDeleteFrames!(indicesToDelete);
+                      // Adjust current index if needed
+                      if (currentIndex >= frames.length - selectedFrames.size) {
+                        setCurrentIndex(Math.max(0, frames.length - selectedFrames.size - 1));
+                      }
+                      setSelectMode(false);
+                      setSelectedFrames(new Set());
+                      toast.success(`Deleted ${indicesToDelete.length} frame${indicesToDelete.length > 1 ? 's' : ''}`);
+                    }}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             
             {/* Download Zip Button */}
             {frames.length > 1 && (
