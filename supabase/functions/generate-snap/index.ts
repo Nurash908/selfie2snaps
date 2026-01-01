@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -161,6 +162,48 @@ serve(async (req) => {
     || req.headers.get("x-real-ip") 
     || "unknown";
   const userAgent = req.headers.get("user-agent") || "unknown";
+
+  // ============= AUTHENTICATION =============
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    console.error("Missing Authorization header");
+    return new Response(
+      JSON.stringify({
+        error: "Authentication required. Please sign in to use this feature.",
+        success: false,
+      }),
+      { 
+        status: 401, 
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Request-Id": requestId } 
+      }
+    );
+  }
+
+  // Create Supabase client with user's auth token
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+    { global: { headers: { Authorization: authHeader } } }
+  );
+
+  // Verify the user is authenticated
+  const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+  
+  if (authError || !user) {
+    console.error("Authentication failed:", authError?.message || "No user found");
+    return new Response(
+      JSON.stringify({
+        error: "Invalid or expired session. Please sign in again.",
+        success: false,
+      }),
+      { 
+        status: 401, 
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Request-Id": requestId } 
+      }
+    );
+  }
+
+  console.log(`Authenticated user: ${user.id}`);
 
   try {
     // Check rate limit
