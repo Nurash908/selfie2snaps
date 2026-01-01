@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ImagePlus, 
@@ -17,12 +17,16 @@ import {
   Building2,
   TreePine,
   Camera,
-  PartyPopper
+  PartyPopper,
+  Clock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+
+const RECENTLY_USED_KEY = "snap-recently-used-backgrounds";
+const MAX_RECENT = 5;
 
 interface BackgroundSelectorProps {
   selected: string;
@@ -173,8 +177,38 @@ const BackgroundSelector = ({
   const [previewBackground, setPreviewBackground] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<BackgroundCategory>("all");
+  const [recentlyUsed, setRecentlyUsed] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playSound } = useSoundEffects();
+
+  // Load recently used backgrounds from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(RECENTLY_USED_KEY);
+    if (stored) {
+      try {
+        setRecentlyUsed(JSON.parse(stored));
+      } catch {
+        setRecentlyUsed([]);
+      }
+    }
+  }, []);
+
+  // Add background to recently used
+  const addToRecentlyUsed = useCallback((bgId: string) => {
+    setRecentlyUsed((prev) => {
+      const filtered = prev.filter((id) => id !== bgId);
+      const updated = [bgId, ...filtered].slice(0, MAX_RECENT);
+      localStorage.setItem(RECENTLY_USED_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  // Get recently used background objects
+  const recentBackgrounds = useMemo(() => {
+    return recentlyUsed
+      .map((id) => stockBackgrounds.find((bg) => bg.id === id))
+      .filter((bg): bg is typeof stockBackgrounds[0] => bg !== undefined);
+  }, [recentlyUsed]);
 
   // Filter backgrounds based on search and category
   const filteredBackgrounds = useMemo(() => {
@@ -364,6 +398,55 @@ const BackgroundSelector = ({
               })}
             </div>
 
+            {/* Recently Used Section */}
+            {recentBackgrounds.length > 0 && !searchQuery && activeCategory === "all" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="w-3 h-3" />
+                  <span>Recently Used</span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  {recentBackgrounds.map((bg) => {
+                    const isSelected = selected === bg.id;
+                    return (
+                      <motion.button
+                        key={`recent-${bg.id}`}
+                        onClick={() => {
+                          playSound("click");
+                          onSelect(bg.id, "preset");
+                          addToRecentlyUsed(bg.id);
+                        }}
+                        className={`relative flex-shrink-0 w-16 aspect-[4/3] rounded-lg overflow-hidden ${
+                          isSelected ? "ring-2 ring-primary" : ""
+                        }`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <img
+                          src={bg.preview}
+                          alt={bg.label}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                        <span className="absolute bottom-0.5 left-0.5 right-0.5 text-[8px] font-medium text-foreground truncate">
+                          {bg.label}
+                        </span>
+                        {isSelected && (
+                          <motion.div
+                            className="absolute top-0.5 right-0.5 w-3 h-3 rounded-full bg-primary flex items-center justify-center"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                          >
+                            <Check className="w-2 h-2 text-primary-foreground" />
+                          </motion.div>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Background Grid */}
             {filteredBackgrounds.length > 0 ? (
               <div className="grid grid-cols-3 gap-2">
@@ -375,6 +458,7 @@ const BackgroundSelector = ({
                       onClick={() => {
                         playSound("click");
                         onSelect(bg.id, "preset");
+                        addToRecentlyUsed(bg.id);
                       }}
                       className={`relative aspect-[4/3] rounded-lg overflow-hidden ${
                         isSelected ? "ring-2 ring-primary" : ""
