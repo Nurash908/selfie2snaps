@@ -168,6 +168,83 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
     }
   };
 
+  const handleFavoriteAll = async () => {
+    if (!user) {
+      playSound('click');
+      toast.error('Please sign in to save favorites');
+      onOpenAuth();
+      return;
+    }
+
+    playSound('favorite');
+    setSavingFavorite(true);
+    
+    try {
+      const { data: existingFavorites } = await supabase
+        .from('favorites')
+        .select('image_url')
+        .eq('user_id', user.id);
+      
+      const existingUrls = new Set(existingFavorites?.map(f => f.image_url) || []);
+      const newFavorites = frames
+        .map((frame, index) => ({ frame, index }))
+        .filter(({ frame }) => !existingUrls.has(frame));
+      
+      if (newFavorites.length === 0) {
+        toast.info('All frames already in favorites');
+        setFavorites(new Set(frames.map((_, i) => i)));
+        setSavingFavorite(false);
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('favorites')
+        .insert(
+          newFavorites.map(({ frame, index }) => ({
+            user_id: user.id,
+            image_url: frame,
+            title: `Snap ${index + 1}`,
+            vibe: vibe || 'Generated Snap',
+          }))
+        );
+      
+      if (error) throw error;
+      
+      setFavorites(new Set(frames.map((_, i) => i)));
+      toast.success(`Added ${newFavorites.length} to favorites! ❤️`);
+    } catch (error: any) {
+      console.error('Error batch adding favorites:', error);
+      toast.error(error.message || 'Failed to save favorites');
+    } finally {
+      setSavingFavorite(false);
+    }
+  };
+
+  const handleUnfavoriteAll = async () => {
+    if (!user) return;
+
+    playSound('click');
+    setSavingFavorite(true);
+    
+    try {
+      const { error } = await supabase
+        .from('favorites')
+        .delete()
+        .eq('user_id', user.id)
+        .in('image_url', frames);
+      
+      if (error) throw error;
+      
+      setFavorites(new Set());
+      toast.success('Removed all from favorites');
+    } catch (error: any) {
+      console.error('Error batch removing favorites:', error);
+      toast.error(error.message || 'Failed to remove favorites');
+    } finally {
+      setSavingFavorite(false);
+    }
+  };
+
   const handleShare = async (platform: string) => {
     playSound('click');
     const caption = encodeURIComponent("Check out my Selfie2Snap creation! Two selfies, one epic moment! 🍌✨ #Selfie2Snap");
@@ -405,7 +482,30 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-3 relative">
+          <div className="flex gap-2 sm:gap-3 relative flex-wrap justify-end">
+            {/* Batch Favorite All Button */}
+            {frames.length > 1 && (
+              <motion.button
+                className={`p-2 sm:p-3 rounded-xl font-medium flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${
+                  favorites.size === frames.length
+                    ? 'bg-secondary/20 text-secondary border border-secondary/30'
+                    : 'bg-card/60 text-muted-foreground hover:bg-card/80 hover:text-foreground'
+                }`}
+                onClick={favorites.size === frames.length ? handleUnfavoriteAll : handleFavoriteAll}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                disabled={savingFavorite}
+              >
+                {savingFavorite ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Heart className="w-4 h-4" fill={favorites.size === frames.length ? 'currentColor' : 'none'} />
+                )}
+                <span className="hidden sm:inline">
+                  {favorites.size === frames.length ? 'Unfav All' : 'Fav All'}
+                </span>
+              </motion.button>
+            )}
             {/* Favorite Button */}
             <motion.button
               className={`p-3 rounded-xl font-medium flex items-center gap-2 relative overflow-hidden ${
