@@ -39,7 +39,7 @@ interface BackgroundSelectorProps {
   onAiGenerate: (imageUrl: string) => void;
 }
 
-type BackgroundCategory = "all" | "beach" | "city" | "nature" | "studio" | "party";
+type BackgroundCategory = "all" | "favorites" | "beach" | "city" | "nature" | "studio" | "party";
 
 const stockBackgrounds = [
   { 
@@ -158,6 +158,7 @@ const stockBackgrounds = [
 
 const categories: { id: BackgroundCategory; label: string; icon: typeof Waves }[] = [
   { id: "all", label: "All", icon: Grid3X3 },
+  { id: "favorites", label: "Favorites", icon: Heart },
   { id: "beach", label: "Beach", icon: Waves },
   { id: "city", label: "City", icon: Building2 },
   { id: "nature", label: "Nature", icon: TreePine },
@@ -221,8 +222,8 @@ const BackgroundSelector = ({
   // Toggle favorite
   const toggleFavorite = useCallback((bgId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    const isFavorite = favorites.includes(bgId);
     setFavorites((prev) => {
-      const isFavorite = prev.includes(bgId);
       const updated = isFavorite 
         ? prev.filter((id) => id !== bgId)
         : [...prev, bgId];
@@ -232,7 +233,6 @@ const BackgroundSelector = ({
     playSound("click");
     const bg = stockBackgrounds.find((b) => b.id === bgId);
     if (bg) {
-      const isFavorite = favorites.includes(bgId);
       toast.success(isFavorite ? `Removed "${bg.label}" from favorites` : `Added "${bg.label}" to favorites`);
     }
   }, [playSound, favorites]);
@@ -263,10 +263,13 @@ const BackgroundSelector = ({
   const filteredBackgrounds = useMemo(() => {
     return stockBackgrounds.filter((bg) => {
       const matchesSearch = bg.label.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = activeCategory === "all" || bg.category === activeCategory;
-      return matchesSearch && matchesCategory;
+      const matchesCategory = activeCategory === "all" 
+        || activeCategory === "favorites" 
+        || bg.category === activeCategory;
+      const matchesFavorites = activeCategory !== "favorites" || favorites.includes(bg.id);
+      return matchesSearch && matchesCategory && matchesFavorites;
     });
-  }, [searchQuery, activeCategory]);
+  }, [searchQuery, activeCategory, favorites]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -418,7 +421,9 @@ const BackgroundSelector = ({
                 const isActive = activeCategory === cat.id;
                 const count = cat.id === "all" 
                   ? stockBackgrounds.length 
-                  : stockBackgrounds.filter(bg => bg.category === cat.id).length;
+                  : cat.id === "favorites"
+                    ? favorites.length
+                    : stockBackgrounds.filter(bg => bg.category === cat.id).length;
                 
                 return (
                   <motion.button
@@ -429,16 +434,20 @@ const BackgroundSelector = ({
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                       isActive 
-                        ? "bg-primary/20 text-primary border border-primary/30" 
+                        ? cat.id === "favorites" 
+                          ? "bg-destructive/20 text-destructive border border-destructive/30"
+                          : "bg-primary/20 text-primary border border-primary/30" 
                         : "bg-secondary/50 text-muted-foreground border border-transparent hover:bg-secondary"
                     }`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <Icon className="w-3 h-3" />
+                    <Icon className={`w-3 h-3 ${cat.id === "favorites" && isActive ? "fill-destructive" : ""}`} />
                     {cat.label}
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                      isActive ? "bg-primary/30" : "bg-muted"
+                      isActive 
+                        ? cat.id === "favorites" ? "bg-destructive/30" : "bg-primary/30" 
+                        : "bg-muted"
                     }`}>
                       {count}
                     </span>
