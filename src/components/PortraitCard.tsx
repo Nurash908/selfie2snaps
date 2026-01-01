@@ -1,8 +1,9 @@
 import { useCallback, useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, X, Check, Crop } from "lucide-react";
+import { Camera, X, Check, Crop, Eye } from "lucide-react";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PortraitCardProps {
   label: string;
@@ -16,16 +17,23 @@ interface PortraitCardProps {
 const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, onCropRequest, isProcessing = false }: PortraitCardProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(false); // For mobile tap-to-reveal
   const [isLoading, setIsLoading] = useState(false);
   const [pulseEffect, setPulseEffect] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playSound } = useSoundEffects();
   const { triggerHaptic } = useHapticFeedback();
+  const isMobile = useIsMobile();
 
   // Handle loading state when processing
   useEffect(() => {
     setIsLoading(isProcessing);
   }, [isProcessing]);
+
+  // Reset reveal state when image changes
+  useEffect(() => {
+    setIsRevealed(false);
+  }, [image]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -50,9 +58,20 @@ const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, onCropReques
   }, []);
 
   const handleClick = () => {
-    playSound("click");
-    triggerHaptic("light");
-    fileInputRef.current?.click();
+    // On mobile with an image, toggle reveal instead of file picker
+    if (isMobile && image && !isLoading) {
+      playSound("click");
+      triggerHaptic("light");
+      setIsRevealed(!isRevealed);
+      return;
+    }
+    
+    // No image or desktop - open file picker
+    if (!image) {
+      playSound("click");
+      triggerHaptic("light");
+      fileInputRef.current?.click();
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,13 +101,16 @@ const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, onCropReques
     }
   };
 
+  // Show controls on hover (desktop) or reveal (mobile)
+  const showControls = isMobile ? isRevealed : isHovered;
+
   return (
     <motion.div
       className="relative w-full max-w-[180px]"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => !isMobile && setIsHovered(true)}
+      onMouseLeave={() => !isMobile && setIsHovered(false)}
     >
       <input
         ref={fileInputRef}
@@ -197,12 +219,33 @@ const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, onCropReques
                 alt={label}
                 className="w-full h-full object-cover transition-all duration-300"
                 style={{
-                  filter: isHovered ? "blur(4px) brightness(0.7)" : "none",
+                  filter: showControls ? "blur(4px) brightness(0.7)" : "none",
                 }}
               />
-              {/* Overlay on hover */}
+              
+              {/* Mobile tap hint */}
+              {isMobile && !showControls && (
+                <motion.div
+                  className="absolute inset-0 flex items-center justify-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1 }}
+                >
+                  <motion.div
+                    className="px-3 py-1.5 rounded-full flex items-center gap-1.5"
+                    style={{ background: "hsl(250 25% 10% / 0.8)", backdropFilter: "blur(4px)" }}
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Eye className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">Tap to edit</span>
+                  </motion.div>
+                </motion.div>
+              )}
+              
+              {/* Overlay with controls */}
               <AnimatePresence>
-                {isHovered && (
+                {showControls && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -233,6 +276,7 @@ const PortraitCard = ({ label, image, onImageUpload, onRemoveImage, onCropReques
                   </motion.div>
                 )}
               </AnimatePresence>
+              
               {/* Success indicator */}
               <motion.div
                 className="absolute top-3 right-3 p-1.5 rounded-full bg-primary"
