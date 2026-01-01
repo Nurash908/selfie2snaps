@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { toast } from 'sonner';
+import HistoryLoadingAnimation from './HistoryLoadingAnimation';
 
 interface HistoryItem {
   id: string;
@@ -353,14 +354,7 @@ const HistorySection = ({ isOpen, onClose, onRegenerate }: HistorySectionProps) 
             {/* Content */}
             <div className="p-6 overflow-y-auto h-[calc(100vh-180px)]">
               {loading ? (
-                <div className="flex flex-col items-center justify-center h-64 gap-4">
-                  <motion.div
-                    className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  />
-                  <p className="text-muted-foreground">Loading history...</p>
-                </div>
+                <HistoryLoadingAnimation />
               ) : history.length === 0 ? (
                 <motion.div
                   className="flex flex-col items-center justify-center h-64 gap-4"

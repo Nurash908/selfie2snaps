@@ -71,62 +71,80 @@ const GenerateButton = ({
     >
       {/* Main buttons row */}
       <div className="flex items-center gap-3">
-        {/* Generate button */}
+        {/* Generate button - Premium Design */}
         <motion.button
           onClick={handleGenerate}
           disabled={disabled || isGenerating}
-          className="flex-1 flex items-center justify-center gap-3 py-5 rounded-2xl font-mono tracking-wider text-sm relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 flex items-center justify-center gap-3 py-5 px-6 rounded-2xl font-mono tracking-wider text-sm relative overflow-hidden group disabled:cursor-not-allowed"
           style={{
             background: isGenerating 
               ? "linear-gradient(135deg, hsl(270 95% 45%) 0%, hsl(300 80% 50%) 50%, hsl(35 100% 50%) 100%)"
-              : "linear-gradient(135deg, hsl(250 25% 15%) 0%, hsl(250 25% 12%) 100%)",
-            border: "1px solid hsl(250 20% 22%)",
+              : disabled 
+                ? "hsl(250 25% 12%)"
+                : "linear-gradient(135deg, hsl(270 95% 55% / 0.2) 0%, hsl(300 80% 50% / 0.15) 50%, hsl(35 100% 55% / 0.2) 100%)",
+            border: disabled ? "1px solid hsl(250 20% 18%)" : "1px solid hsl(270 95% 65% / 0.4)",
             boxShadow: isGenerating 
-              ? "0 0 40px hsl(270 95% 65% / 0.5), 0 0 80px hsl(270 95% 65% / 0.3)"
-              : "none",
+              ? "0 0 50px hsl(270 95% 65% / 0.6), 0 0 100px hsl(270 95% 65% / 0.3), inset 0 0 30px hsl(270 95% 65% / 0.2)"
+              : disabled 
+                ? "none"
+                : "0 0 30px hsl(270 95% 65% / 0.2), 0 8px 32px hsl(0 0% 0% / 0.4)",
           }}
-          whileHover={{ scale: disabled ? 1 : 1.02, y: disabled ? 0 : -2 }}
-          whileTap={{ scale: disabled ? 1 : 0.98 }}
+          whileHover={disabled ? {} : { 
+            scale: 1.02, 
+            y: -3,
+            boxShadow: "0 0 50px hsl(270 95% 65% / 0.4), 0 12px 40px hsl(0 0% 0% / 0.5)"
+          }}
+          whileTap={disabled ? {} : { scale: 0.98 }}
           animate={pulseGenerate ? { 
             scale: [1, 1.08, 1], 
             boxShadow: [
               "0 0 0 hsl(270 95% 65% / 0)", 
-              "0 0 60px hsl(270 95% 65% / 0.8), 0 0 120px hsl(35 100% 60% / 0.4)", 
-              "0 0 20px hsl(270 95% 65% / 0.3)"
+              "0 0 80px hsl(270 95% 65% / 0.9), 0 0 150px hsl(35 100% 60% / 0.5)", 
+              "0 0 30px hsl(270 95% 65% / 0.4)"
             ] 
           } : {}}
           transition={{ duration: 0.5 }}
         >
+          {/* Premium glow border effect */}
+          {!disabled && !isGenerating && (
+            <motion.div
+              className="absolute inset-0 rounded-2xl pointer-events-none"
+              style={{
+                background: "linear-gradient(135deg, hsl(270 95% 65% / 0.3), hsl(35 100% 60% / 0.2), hsl(300 80% 50% / 0.3))",
+                backgroundSize: "200% 200%",
+              }}
+              animate={{
+                backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"],
+              }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            />
+          )}
+
           {/* Animated background gradient when generating */}
           {isGenerating && (
             <motion.div
               className="absolute inset-0"
               style={{
-                background: "linear-gradient(90deg, hsl(270 95% 55% / 0.3) 0%, hsl(35 100% 55% / 0.3) 50%, hsl(270 95% 55% / 0.3) 100%)",
+                background: "linear-gradient(90deg, hsl(270 95% 55% / 0.4) 0%, hsl(35 100% 55% / 0.4) 50%, hsl(270 95% 55% / 0.4) 100%)",
                 backgroundSize: "200% 100%",
               }}
               animate={{ backgroundPosition: ["0% 0%", "200% 0%"] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
             />
           )}
 
-          {/* Hover gradient overlay */}
-          <motion.div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{
-              background: "linear-gradient(135deg, hsl(270 95% 65% / 0.15) 0%, hsl(35 100% 60% / 0.1) 100%)",
-            }}
-          />
-
-          {/* Shine sweep effect */}
-          <motion.div
-            className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100"
-            style={{
-              background: "linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.2) 50%, transparent 100%)",
-            }}
-            animate={{ x: ["-100%", "200%"] }}
-            transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
-          />
+          {/* Premium shimmer sweep */}
+          {!disabled && (
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: "linear-gradient(105deg, transparent 0%, transparent 40%, hsl(0 0% 100% / 0.15) 50%, transparent 60%, transparent 100%)",
+                backgroundSize: "200% 100%",
+              }}
+              animate={{ backgroundPosition: ["200% 0%", "-200% 0%"] }}
+              transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 1 }}
+            />
+          )}
 
           {/* Haptic pulse ring */}
           <motion.div
@@ -134,11 +152,11 @@ const GenerateButton = ({
             animate={pulseGenerate ? { 
               boxShadow: [
                 "inset 0 0 0 0 hsl(270 95% 65% / 0.8)", 
-                "inset 0 0 0 6px hsl(270 95% 65% / 0)", 
+                "inset 0 0 0 8px hsl(270 95% 65% / 0)", 
                 "inset 0 0 0 0 hsl(270 95% 65% / 0)"
               ]
             } : {}}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.7 }}
           />
 
           {/* Particle explosion */}
@@ -153,17 +171,17 @@ const GenerateButton = ({
                       background: particle.id % 2 === 0 ? "hsl(270 95% 65%)" : "hsl(35 100% 60%)",
                       left: "50%",
                       top: "50%",
-                      boxShadow: `0 0 10px ${particle.id % 2 === 0 ? "hsl(270 95% 65%)" : "hsl(35 100% 60%)"}`,
+                      boxShadow: `0 0 15px ${particle.id % 2 === 0 ? "hsl(270 95% 65%)" : "hsl(35 100% 60%)"}`,
                     }}
                     initial={{ x: "-50%", y: "-50%", scale: 0, opacity: 1 }}
                     animate={{ 
-                      x: `calc(-50% + ${Math.cos(particle.angle * Math.PI / 180) * 80}px)`,
-                      y: `calc(-50% + ${Math.sin(particle.angle * Math.PI / 180) * 80}px)`,
-                      scale: [0, 1.5, 0],
+                      x: `calc(-50% + ${Math.cos(particle.angle * Math.PI / 180) * 100}px)`,
+                      y: `calc(-50% + ${Math.sin(particle.angle * Math.PI / 180) * 100}px)`,
+                      scale: [0, 1.8, 0],
                       opacity: [1, 1, 0],
                     }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.8, delay: particle.delay, ease: "easeOut" }}
+                    transition={{ duration: 1, delay: particle.delay, ease: "easeOut" }}
                   />
                 ))}
               </>
@@ -174,10 +192,10 @@ const GenerateButton = ({
           <motion.div
             animate={isGenerating ? { 
               rotate: 360,
-              scale: [1, 1.2, 1],
+              scale: [1, 1.3, 1],
             } : {}}
             transition={{ 
-              rotate: { duration: 1, repeat: isGenerating ? Infinity : 0, ease: "linear" },
+              rotate: { duration: 0.8, repeat: isGenerating ? Infinity : 0, ease: "linear" },
               scale: { duration: 0.5, repeat: isGenerating ? Infinity : 0, ease: "easeInOut" },
             }}
             className="relative"
@@ -185,39 +203,84 @@ const GenerateButton = ({
             {isGenerating ? (
               <Wand2 className="w-6 h-6 text-foreground" />
             ) : (
-              <Sparkles className="w-6 h-6 text-primary group-hover:text-secondary transition-colors" />
+              <motion.div
+                animate={disabled ? {} : { 
+                  rotate: [0, 10, -10, 0],
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-6 h-6 text-primary group-hover:text-secondary transition-colors" />
+              </motion.div>
             )}
             {/* Icon glow */}
             {isGenerating && (
               <motion.div
                 className="absolute inset-0 rounded-full"
-                style={{ background: "radial-gradient(circle, hsl(270 95% 65% / 0.5), transparent)" }}
-                animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }}
-                transition={{ duration: 0.8, repeat: Infinity }}
+                style={{ background: "radial-gradient(circle, hsl(270 95% 65% / 0.6), transparent)" }}
+                animate={{ scale: [1, 2.5, 1], opacity: [0.6, 0, 0.6] }}
+                transition={{ duration: 0.6, repeat: Infinity }}
               />
             )}
           </motion.div>
 
-          <span className={`relative z-10 font-semibold ${isGenerating ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"} transition-colors`}>
-            {isGenerating ? "GENERATING MAGIC..." : "GENERATE SELFIE SNAP"}
-          </span>
+          <div className="flex flex-col items-start relative z-10">
+            <span className={`font-bold text-base ${
+              isGenerating 
+                ? "text-foreground" 
+                : disabled 
+                  ? "text-muted-foreground/50"
+                  : "text-foreground group-hover:text-secondary"
+            } transition-colors`}>
+              {isGenerating ? "Creating Magic..." : "Generate Selfie Snap"}
+            </span>
+            {!isGenerating && !disabled && (
+              <motion.span 
+                className="text-[10px] text-muted-foreground group-hover:text-primary/80 transition-colors"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                ✨ AI-powered transformation
+              </motion.span>
+            )}
+          </div>
+
+          {/* Floating stars when idle and enabled */}
+          {!disabled && !isGenerating && (
+            <>
+              <motion.div
+                className="absolute top-3 left-6"
+                animate={{ y: [0, -5, 0], opacity: [0.3, 0.7, 0.3], rotate: [0, 180, 360] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Stars className="w-3 h-3 text-secondary/60" />
+              </motion.div>
+              <motion.div
+                className="absolute bottom-3 right-16"
+                animate={{ y: [0, -4, 0], opacity: [0.2, 0.6, 0.2] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              >
+                <Zap className="w-3 h-3 text-primary/60" />
+              </motion.div>
+            </>
+          )}
 
           {/* Floating stars when generating */}
           {isGenerating && (
             <>
               <motion.div
                 className="absolute top-2 left-8"
-                animate={{ y: [0, -8, 0], opacity: [0.5, 1, 0.5], rotate: [0, 180, 360] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                animate={{ y: [0, -10, 0], opacity: [0.5, 1, 0.5], rotate: [0, 180, 360] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
               >
-                <Stars className="w-3 h-3 text-secondary" />
+                <Stars className="w-4 h-4 text-secondary" />
               </motion.div>
               <motion.div
                 className="absolute bottom-2 right-12"
-                animate={{ y: [0, -6, 0], opacity: [0.3, 0.8, 0.3], rotate: [0, -180, -360] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                animate={{ y: [0, -8, 0], opacity: [0.3, 0.9, 0.3], rotate: [0, -180, -360] }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
               >
-                <Zap className="w-3 h-3 text-primary" />
+                <Zap className="w-4 h-4 text-primary" />
               </motion.div>
             </>
           )}
