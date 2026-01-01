@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { 
   ImagePlus, 
   Sparkles, 
@@ -245,6 +245,12 @@ const BackgroundSelector = ({
     toast.success("Favorites cleared");
   }, [playSound]);
 
+  // Handle favorites reorder
+  const handleFavoritesReorder = useCallback((newOrder: string[]) => {
+    setFavorites(newOrder);
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(newOrder));
+  }, []);
+
   // Get recently used background objects
   const recentBackgrounds = useMemo(() => {
     return recentlyUsed
@@ -466,6 +472,7 @@ const BackgroundSelector = ({
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/20 text-destructive">
                       {favoriteBackgrounds.length}
                     </span>
+                    <span className="text-[10px] text-muted-foreground/60 italic">• drag to reorder</span>
                   </div>
                   <motion.button
                     onClick={clearFavorites}
@@ -477,35 +484,49 @@ const BackgroundSelector = ({
                     Clear
                   </motion.button>
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                  {favoriteBackgrounds.map((bg) => {
+                <Reorder.Group
+                  axis="x"
+                  values={favorites}
+                  onReorder={handleFavoritesReorder}
+                  className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
+                >
+                  {favorites.map((bgId) => {
+                    const bg = stockBackgrounds.find((b) => b.id === bgId);
+                    if (!bg) return null;
                     const isSelected = selected === bg.id;
                     return (
-                      <motion.button
-                        key={`fav-${bg.id}`}
-                        onClick={() => {
-                          playSound("click");
-                          onSelect(bg.id, "preset");
-                          addToRecentlyUsed(bg.id);
-                        }}
-                        className={`relative flex-shrink-0 w-16 aspect-[4/3] rounded-lg overflow-hidden ${
+                      <Reorder.Item
+                        key={bg.id}
+                        value={bg.id}
+                        className={`relative flex-shrink-0 w-16 aspect-[4/3] rounded-lg overflow-hidden cursor-grab active:cursor-grabbing ${
                           isSelected ? "ring-2 ring-primary" : ""
                         }`}
                         whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileTap={{ scale: 1.02 }}
+                        whileDrag={{ scale: 1.1, zIndex: 50 }}
                       >
-                        <img
-                          src={bg.preview}
-                          alt={bg.label}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                        <span className="absolute bottom-0.5 left-0.5 right-0.5 text-[8px] font-medium text-foreground truncate">
-                          {bg.label}
-                        </span>
+                        <div
+                          onClick={() => {
+                            playSound("click");
+                            onSelect(bg.id, "preset");
+                            addToRecentlyUsed(bg.id);
+                          }}
+                          className="w-full h-full"
+                        >
+                          <img
+                            src={bg.preview}
+                            alt={bg.label}
+                            className="w-full h-full object-cover pointer-events-none"
+                            draggable={false}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
+                          <span className="absolute bottom-0.5 left-0.5 right-0.5 text-[8px] font-medium text-foreground truncate pointer-events-none">
+                            {bg.label}
+                          </span>
+                        </div>
                         <motion.button
                           onClick={(e) => toggleFavorite(bg.id, e)}
-                          className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-background/60 flex items-center justify-center"
+                          className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-background/60 flex items-center justify-center z-10"
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                         >
@@ -513,17 +534,17 @@ const BackgroundSelector = ({
                         </motion.button>
                         {isSelected && (
                           <motion.div
-                            className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-primary flex items-center justify-center"
+                            className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-primary flex items-center justify-center pointer-events-none"
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                           >
                             <Check className="w-2 h-2 text-primary-foreground" />
                           </motion.div>
                         )}
-                      </motion.button>
+                      </Reorder.Item>
                     );
                   })}
-                </div>
+                </Reorder.Group>
               </div>
             )}
 
