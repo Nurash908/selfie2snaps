@@ -78,6 +78,24 @@ const Index = () => {
     setSelectedRatio(settings.ratio);
   };
   
+  // Map background selector IDs to valid edge function scene values
+  const mapBackgroundToScene = (background: string): string => {
+    const sceneMapping: Record<string, string> = {
+      "sunset-beach": "beach",
+      "city-night": "city",
+      "mountains": "mountains",
+      "forest": "natural",
+      "studio-gradient": "studio",
+      "neon-party": "party",
+      "natural": "natural",
+      "beach": "beach",
+      "city": "city",
+      "studio": "studio",
+      "party": "party",
+    };
+    return sceneMapping[background] || "natural";
+  };
+
   const handleBackgroundSelect = (background: string, type: "preset" | "custom" | "ai") => {
     setBackgroundType(type);
     if (type === "preset") {
@@ -230,7 +248,7 @@ const Index = () => {
           image2,
           ratio: selectedRatio,
           frameCount,
-          scene: selectedScene,
+          scene: mapBackgroundToScene(selectedScene),
           swapPositions,
           style: selectedStyle
         }
