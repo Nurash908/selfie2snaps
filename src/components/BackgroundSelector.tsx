@@ -34,10 +34,22 @@ const stockBackgrounds = [
     preview: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=100&h=75&fit=crop"
   },
   { 
+    id: "tropical-paradise", 
+    label: "Tropical Paradise", 
+    url: "https://images.unsplash.com/photo-1559128010-7c1ad6e1b6a5?w=400&h=300&fit=crop",
+    preview: "https://images.unsplash.com/photo-1559128010-7c1ad6e1b6a5?w=100&h=75&fit=crop"
+  },
+  { 
     id: "city-night", 
     label: "City Night", 
     url: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=400&h=300&fit=crop",
     preview: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=100&h=75&fit=crop"
+  },
+  { 
+    id: "tokyo-neon", 
+    label: "Tokyo Neon", 
+    url: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop",
+    preview: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=100&h=75&fit=crop"
   },
   { 
     id: "mountains", 
@@ -46,22 +58,70 @@ const stockBackgrounds = [
     preview: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=100&h=75&fit=crop"
   },
   { 
+    id: "snowy-peaks", 
+    label: "Snowy Peaks", 
+    url: "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?w=400&h=300&fit=crop",
+    preview: "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?w=100&h=75&fit=crop"
+  },
+  { 
     id: "forest", 
     label: "Forest", 
     url: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&h=300&fit=crop",
     preview: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=100&h=75&fit=crop"
   },
   { 
+    id: "autumn-woods", 
+    label: "Autumn Woods", 
+    url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop",
+    preview: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=75&fit=crop"
+  },
+  { 
     id: "studio-gradient", 
-    label: "Studio", 
+    label: "Studio Pink", 
     url: "https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=400&h=300&fit=crop",
     preview: "https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=100&h=75&fit=crop"
+  },
+  { 
+    id: "studio-blue", 
+    label: "Studio Blue", 
+    url: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=300&fit=crop",
+    preview: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=100&h=75&fit=crop"
   },
   { 
     id: "neon-party", 
     label: "Neon Party", 
     url: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=300&fit=crop",
     preview: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=100&h=75&fit=crop"
+  },
+  { 
+    id: "club-lights", 
+    label: "Club Lights", 
+    url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop",
+    preview: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=100&h=75&fit=crop"
+  },
+  { 
+    id: "cherry-blossom", 
+    label: "Cherry Blossom", 
+    url: "https://images.unsplash.com/photo-1522383225653-ed111181a951?w=400&h=300&fit=crop",
+    preview: "https://images.unsplash.com/photo-1522383225653-ed111181a951?w=100&h=75&fit=crop"
+  },
+  { 
+    id: "northern-lights", 
+    label: "Northern Lights", 
+    url: "https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=400&h=300&fit=crop",
+    preview: "https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=100&h=75&fit=crop"
+  },
+  { 
+    id: "desert-dunes", 
+    label: "Desert Dunes", 
+    url: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&h=300&fit=crop",
+    preview: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=100&h=75&fit=crop"
+  },
+  { 
+    id: "underwater", 
+    label: "Underwater", 
+    url: "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=400&h=300&fit=crop",
+    preview: "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=100&h=75&fit=crop"
   },
 ];
 
