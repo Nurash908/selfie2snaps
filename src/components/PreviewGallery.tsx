@@ -22,6 +22,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
   const [copiedLink, setCopiedLink] = useState(false);
   const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [zipProgress, setZipProgress] = useState(0);
   const [savingFavorite, setSavingFavorite] = useState(false);
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
@@ -105,17 +106,30 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
     
     playSound('download');
     setDownloadingAll(true);
+    setZipProgress(0);
     
     try {
       const zip = new JSZip();
+      const totalSteps = frames.length + 1; // +1 for zip generation
       
       for (let i = 0; i < frames.length; i++) {
         const response = await fetch(frames[i]);
         const blob = await response.blob();
         zip.file(`selfie2snap-${i + 1}.jpg`, blob);
+        setZipProgress(Math.round(((i + 1) / totalSteps) * 100));
       }
       
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      }, (metadata) => {
+        // Progress during zip generation (last step)
+        const baseProgress = Math.round((frames.length / totalSteps) * 100);
+        const zipGenProgress = Math.round((metadata.percent / 100) * (100 - baseProgress));
+        setZipProgress(baseProgress + zipGenProgress);
+      });
+      
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -131,6 +145,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
       toast.error('Failed to create zip file');
     } finally {
       setDownloadingAll(false);
+      setZipProgress(0);
     }
   };
 
@@ -546,19 +561,30 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
             {/* Download All as Zip Button */}
             {frames.length > 1 && (
               <motion.button
-                className="p-2 sm:p-3 rounded-xl font-medium flex items-center gap-1 sm:gap-2 text-xs sm:text-sm bg-card/60 text-muted-foreground hover:bg-card/80 hover:text-foreground"
+                className="p-2 sm:p-3 rounded-xl font-medium flex items-center gap-1 sm:gap-2 text-xs sm:text-sm bg-card/60 text-muted-foreground hover:bg-card/80 hover:text-foreground relative overflow-hidden"
                 onClick={handleDownloadAll}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 disabled={downloadingAll}
               >
-                {downloadingAll ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Archive className="w-4 h-4" />
+                {/* Progress bar background */}
+                {downloadingAll && (
+                  <motion.div
+                    className="absolute inset-0 bg-primary/20"
+                    initial={{ width: '0%' }}
+                    animate={{ width: `${zipProgress}%` }}
+                    transition={{ duration: 0.2 }}
+                  />
                 )}
-                <span className="hidden sm:inline">
-                  {downloadingAll ? 'Zipping...' : 'Download All'}
+                <span className="relative flex items-center gap-1 sm:gap-2">
+                  {downloadingAll ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Archive className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {downloadingAll ? `${zipProgress}%` : 'Download All'}
+                  </span>
                 </span>
               </motion.button>
             )}
