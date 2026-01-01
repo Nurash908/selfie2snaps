@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 const RECENTLY_USED_KEY = "snap-recently-used-backgrounds";
 const FAVORITES_KEY = "snap-favorite-backgrounds";
@@ -629,48 +630,73 @@ const BackgroundSelector = ({
                   const isSelected = selected === bg.id;
                   const isFavorite = favorites.includes(bg.id);
                   return (
-                    <motion.button
-                      key={bg.id}
-                      onClick={() => {
-                        playSound("click");
-                        onSelect(bg.id, "preset");
-                        addToRecentlyUsed(bg.id);
-                      }}
-                      className={`relative aspect-[4/3] rounded-lg overflow-hidden ${
-                        isSelected ? "ring-2 ring-primary" : ""
-                      }`}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      layout
-                    >
-                      <img
-                        src={bg.preview}
-                        alt={bg.label}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                      <span className="absolute bottom-1 left-1 right-4 text-[10px] font-medium text-foreground truncate">
-                        {bg.label}
-                      </span>
-                      {/* Favorite button */}
-                      <motion.button
-                        onClick={(e) => toggleFavorite(bg.id, e)}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-background/60 flex items-center justify-center hover:bg-background/80 transition-colors"
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <Heart className={`w-3 h-3 transition-colors ${isFavorite ? "text-destructive fill-destructive" : "text-muted-foreground hover:text-destructive"}`} />
-                      </motion.button>
-                      {isSelected && (
-                        <motion.div
-                          className="absolute top-1 left-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
+                    <HoverCard key={bg.id} openDelay={400} closeDelay={100}>
+                      <HoverCardTrigger asChild>
+                        <motion.button
+                          onClick={() => {
+                            playSound("click");
+                            onSelect(bg.id, "preset");
+                            addToRecentlyUsed(bg.id);
+                          }}
+                          className={`relative aspect-[4/3] rounded-lg overflow-hidden ${
+                            isSelected ? "ring-2 ring-primary" : ""
+                          }`}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          layout
                         >
-                          <Check className="w-2.5 h-2.5 text-primary-foreground" />
-                        </motion.div>
-                      )}
-                    </motion.button>
+                          <img
+                            src={bg.preview}
+                            alt={bg.label}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                          <span className="absolute bottom-1 left-1 right-4 text-[10px] font-medium text-foreground truncate">
+                            {bg.label}
+                          </span>
+                          {/* Favorite button */}
+                          <motion.button
+                            onClick={(e) => toggleFavorite(bg.id, e)}
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-background/60 flex items-center justify-center hover:bg-background/80 transition-colors"
+                            whileHover={{ scale: 1.15 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            <Heart className={`w-3 h-3 transition-colors ${isFavorite ? "text-destructive fill-destructive" : "text-muted-foreground hover:text-destructive"}`} />
+                          </motion.button>
+                          {isSelected && (
+                            <motion.div
+                              className="absolute top-1 left-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center"
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                            >
+                              <Check className="w-2.5 h-2.5 text-primary-foreground" />
+                            </motion.div>
+                          )}
+                        </motion.button>
+                      </HoverCardTrigger>
+                      <HoverCardContent 
+                        side="right" 
+                        align="start" 
+                        className="w-64 p-2"
+                        sideOffset={8}
+                      >
+                        <div className="space-y-2">
+                          <div className="aspect-video rounded-lg overflow-hidden">
+                            <img
+                              src={bg.url}
+                              alt={bg.label}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">{bg.label}</p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              Category: {bg.category}
+                            </p>
+                          </div>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
                   );
                 })}
               </div>
