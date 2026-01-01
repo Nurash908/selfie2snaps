@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Download, Trash2, X, Sparkles, ImageOff, Package, Loader2, CheckCircle2 } from 'lucide-react';
+import { Heart, Download, Trash2, X, Sparkles, ImageOff, Package, Loader2, CheckCircle2, Clock, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { toast } from 'sonner';
+import FavoritesLoadingAnimation from './FavoritesLoadingAnimation';
 
 interface Favorite {
   id: string;
@@ -22,10 +23,11 @@ interface FavoritesSectionProps {
 const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<Favorite | null>(null);
   const [selectedForBatch, setSelectedForBatch] = useState<Set<string>>(new Set());
   const [isBatchDownloading, setIsBatchDownloading] = useState(false);
   const [batchProgress, setBatchProgress] = useState(0);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
 
@@ -42,7 +44,8 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
       const { data, error } = await supabase
         .from('favorites')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50);
       
       if (error) throw error;
       setFavorites(data || []);
@@ -52,6 +55,18 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString();
   };
 
   const handleDelete = async (id: string) => {
@@ -290,37 +305,41 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
             {/* Content */}
             <div className="p-6 overflow-y-auto h-[calc(100vh-180px)]">
               {loading ? (
-                <div className="flex flex-col items-center justify-center h-64 gap-4">
-                  <motion.div
-                    className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  />
-                  <p className="text-muted-foreground">Loading favorites...</p>
-                </div>
+                <FavoritesLoadingAnimation />
               ) : favorites.length === 0 ? (
                 <motion.div
                   className="flex flex-col items-center justify-center h-64 gap-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <ImageOff className="w-16 h-16 text-muted-foreground/30" />
+                  <motion.div
+                    animate={{ 
+                      rotate: [0, 10, -10, 0],
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  >
+                    <ImageOff className="w-16 h-16 text-muted-foreground/30" />
+                  </motion.div>
                   <p className="text-muted-foreground text-center">
                     No favorites yet.<br />
                     <span className="text-sm">Save your favorite snaps to see them here!</span>
                   </p>
                 </motion.div>
               ) : (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   {favorites.map((fav, index) => (
                     <motion.div
                       key={fav.id}
-                      className={`relative group rounded-xl overflow-hidden cursor-pointer ${selectedForBatch.has(fav.id) ? 'ring-2 ring-primary' : ''}`}
-                      initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      className={`relative group rounded-2xl overflow-hidden cursor-pointer ${selectedForBatch.has(fav.id) ? 'ring-2 ring-primary' : ''}`}
+                      initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      transition={{ delay: index * 0.05, type: "spring", stiffness: 200 }}
                       whileHover={{ scale: 1.02 }}
                       style={{
+                        background: selectedForBatch.has(fav.id) 
+                          ? 'linear-gradient(135deg, hsl(350 40% 18%) 0%, hsl(270 25% 14%) 100%)'
+                          : 'linear-gradient(135deg, hsl(270 25% 15%) 0%, hsl(270 25% 12%) 100%)',
                         boxShadow: '0 10px 30px hsl(0 0% 0% / 0.3)',
                       }}
                       onClick={() => toggleBatchSelect(fav.id)}
@@ -335,7 +354,7 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
                           className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                             selectedForBatch.has(fav.id) 
                               ? 'bg-primary border-primary' 
-                              : 'border-foreground/50 bg-card/50'
+                              : 'border-muted-foreground/50 bg-card/50'
                           }`}
                         >
                           {selectedForBatch.has(fav.id) && (
@@ -349,47 +368,105 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
                         </div>
                       </motion.div>
 
-                      <img
-                        src={fav.image_url}
-                        alt={fav.title || 'Favorite snap'}
-                        className="w-full aspect-[3/4] object-cover"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          playSound('preview');
-                          setSelectedImage(fav.image_url);
-                        }}
-                      />
-                      
-                      {/* Overlay */}
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <motion.button
-                          onClick={() => handleDownload(fav.image_url, index)}
-                          className="p-2 rounded-full bg-card/80 backdrop-blur-sm text-foreground hover:bg-primary transition-colors"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
+                      <div className="flex gap-4 p-4">
+                        {/* Thumbnail */}
+                        <motion.div 
+                          className="relative w-24 h-28 rounded-xl overflow-hidden flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            playSound('preview');
+                            setSelectedImage(fav);
+                          }}
+                          whileHover={{ scale: 1.05 }}
                         >
-                          <Download className="w-4 h-4" />
-                        </motion.button>
-                        <motion.button
-                          onClick={() => handleDelete(fav.id)}
-                          className="p-2 rounded-full bg-card/80 backdrop-blur-sm text-destructive hover:bg-destructive hover:text-foreground transition-colors"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </motion.button>
-                      </motion.div>
+                          <img
+                            src={fav.image_url}
+                            alt={fav.title || 'Favorite snap'}
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Hover overlay */}
+                          <motion.div
+                            className="absolute inset-0 bg-primary/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Eye className="w-6 h-6 text-foreground" />
+                          </motion.div>
+                          {/* Glow effect */}
+                          <motion.div
+                            className="absolute inset-0 pointer-events-none"
+                            style={{
+                              boxShadow: 'inset 0 0 20px hsl(270 95% 65% / 0.2)',
+                            }}
+                          />
+                        </motion.div>
 
-                      {/* Vibe badge */}
-                      {fav.vibe && (
-                        <div className="absolute top-2 right-2 px-2 py-1 rounded-full text-[10px] font-medium bg-card/80 backdrop-blur-sm text-foreground flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" />
-                          {fav.vibe}
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          {/* Date */}
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                            <Clock className="w-3 h-3" />
+                            {formatDate(fav.created_at)}
+                          </div>
+
+                          {/* Title */}
+                          {fav.title && (
+                            <p className="text-sm font-medium text-foreground mb-2 truncate">
+                              {fav.title}
+                            </p>
+                          )}
+
+                          {/* Vibe badge */}
+                          {fav.vibe && (
+                            <motion.div
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium"
+                              style={{
+                                background: 'linear-gradient(135deg, hsl(270 95% 65% / 0.2), hsl(350 80% 60% / 0.2))',
+                                color: 'hsl(270 95% 75%)',
+                              }}
+                              whileHover={{ scale: 1.05 }}
+                            >
+                              <Sparkles className="w-3 h-3" />
+                              {fav.vibe}
+                            </motion.div>
+                          )}
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                            <motion.button
+                              onClick={() => handleDownload(fav.image_url, index)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                              style={{
+                                background: 'hsl(250 25% 18%)',
+                                color: 'hsl(0 0% 80%)',
+                              }}
+                              whileHover={{ scale: 1.05, background: 'hsl(250 25% 25%)' }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Download
+                            </motion.button>
+                            <motion.button
+                              onClick={() => {
+                                setDeletingId(fav.id);
+                                handleDelete(fav.id);
+                              }}
+                              className="p-1.5 rounded-lg transition-colors"
+                              style={{
+                                background: 'hsl(0 60% 20% / 0.5)',
+                                color: 'hsl(0 70% 60%)',
+                              }}
+                              whileHover={{ scale: 1.1, background: 'hsl(0 70% 35%)' }}
+                              whileTap={{ scale: 0.95 }}
+                              disabled={deletingId === fav.id}
+                            >
+                              {deletingId === fav.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </motion.button>
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </motion.div>
                   ))}
                 </div>
@@ -401,23 +478,65 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
           <AnimatePresence>
             {selectedImage && (
               <motion.div
-                className="fixed inset-0 z-60 flex items-center justify-center p-8 bg-background/95 backdrop-blur-xl"
+                className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-background/95 backdrop-blur-xl"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setSelectedImage(null)}
               >
-                <motion.img
-                  src={selectedImage}
-                  alt="Preview"
-                  className="max-w-full max-h-full object-contain rounded-2xl"
+                <motion.div
+                  className="relative max-w-2xl w-full"
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.8, opacity: 0 }}
-                  style={{
-                    boxShadow: '0 30px 60px hsl(0 0% 0% / 0.5)',
-                  }}
-                />
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <img
+                    src={selectedImage.image_url}
+                    alt={selectedImage.title || 'Preview'}
+                    className="w-full object-contain rounded-2xl"
+                    style={{
+                      boxShadow: '0 30px 60px hsl(0 0% 0% / 0.5)',
+                      maxHeight: '80vh',
+                    }}
+                  />
+                  
+                  {/* Close button */}
+                  <motion.button
+                    onClick={() => setSelectedImage(null)}
+                    className="absolute top-4 right-4 p-2 rounded-full bg-card/80 backdrop-blur-sm"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X className="w-5 h-5 text-foreground" />
+                  </motion.button>
+
+                  {/* Info overlay */}
+                  <motion.div
+                    className="absolute bottom-0 left-0 right-0 p-4 rounded-b-2xl"
+                    style={{
+                      background: 'linear-gradient(to top, hsl(0 0% 5% / 0.9), transparent)',
+                    }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {selectedImage.title && (
+                          <p className="text-foreground font-medium">{selectedImage.title}</p>
+                        )}
+                        <p className="text-sm text-muted-foreground">{formatDate(selectedImage.created_at)}</p>
+                      </div>
+                      {selectedImage.vibe && (
+                        <div className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                          <Heart className="w-3.5 h-3.5" fill="currentColor" />
+                          {selectedImage.vibe}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
