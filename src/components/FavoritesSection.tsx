@@ -38,16 +38,25 @@ const FavoritesSection = ({ isOpen, onClose }: FavoritesSectionProps) => {
   }, [user, isOpen]);
 
   const fetchFavorites = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user, skipping fetch');
+      return;
+    }
     setLoading(true);
     try {
+      console.log('Fetching favorites for user:', user.id);
       const { data, error } = await supabase
         .from('favorites')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase fetch error:', error);
+        throw error;
+      }
+      console.log('Fetched favorites:', data);
       setFavorites(data || []);
     } catch (error) {
       console.error('Error fetching favorites:', error);

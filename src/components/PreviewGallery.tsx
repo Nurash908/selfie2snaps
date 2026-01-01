@@ -73,26 +73,43 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
     const imageUrl = frames[index];
     
     try {
-      const { error } = await supabase
+      // Check if already favorited
+      const { data: existing } = await supabase
+        .from('favorites')
+        .select('id')
+        .eq('image_url', imageUrl)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) {
+        toast.info('Already in favorites');
+        setFavorites(prev => new Set([...prev, index]));
+        setSavingFavorite(false);
+        return;
+      }
+
+      const { data, error } = await supabase
         .from('favorites')
         .insert({
           user_id: user.id,
           image_url: imageUrl,
           title: `Snap ${index + 1}`,
-          vibe: vibe,
-        });
+          vibe: vibe || 'Generated Snap',
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
 
+      console.log('Favorite saved successfully:', data);
       setFavorites(prev => new Set([...prev, index]));
       toast.success('Added to favorites! ❤️');
     } catch (error: any) {
       console.error('Error adding favorite:', error);
-      if (error.message?.includes('duplicate')) {
-        toast.info('Already in favorites');
-      } else {
-        toast.error('Failed to save favorite');
-      }
+      toast.error(error.message || 'Failed to save favorite');
     } finally {
       setSavingFavorite(false);
     }
