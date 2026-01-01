@@ -464,6 +464,20 @@ serve(async (req) => {
       console.log(`Generating frame ${i + 1}/${frameCount}...`);
 
       try {
+        const imagePrompt = `Combine these two selfie photos into ONE natural-looking photo where both people appear together as if the photo was taken of them at the same time. Place them ${variation}. 
+                    
+IMPORTANT: 
+- Keep both people's faces and features exactly as they appear in their original photos
+- Make it look like a real photo taken together, not a collage
+- Background: ${sceneDescription}
+- Visual style: ${styleDescription}
+- Natural lighting that matches both subjects and the scene
+- Aspect ratio: ${ratio}
+- High quality, professional looking combined photograph
+- Apply the visual style consistently to the entire image`;
+
+        console.log(`Frame ${i + 1} - Sending request to AI gateway...`);
+        
         const editResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -478,17 +492,7 @@ serve(async (req) => {
                 content: [
                   {
                     type: "text",
-                    text: `Combine these two selfie photos into ONE natural-looking photo where both people appear together as if the photo was taken of them at the same time. Place them ${variation}. 
-                    
-IMPORTANT: 
-- Keep both people's faces and features exactly as they appear in their original photos
-- Make it look like a real photo taken together, not a collage
-- Background: ${sceneDescription}
-- Visual style: ${styleDescription}
-- Natural lighting that matches both subjects and the scene
-- Aspect ratio: ${ratio}
-- High quality, professional looking combined photograph
-- Apply the visual style consistently to the entire image`
+                    text: imagePrompt
                   },
                   {
                     type: "image_url",
@@ -505,16 +509,62 @@ IMPORTANT:
           }),
         });
 
+        console.log(`Frame ${i + 1} - Response status: ${editResponse.status}`);
+
         if (editResponse.ok) {
           const editData = await editResponse.json();
+          console.log(`Frame ${i + 1} - Response data keys:`, Object.keys(editData));
+          
           const imageUrl = editData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
           if (imageUrl) {
             frames.push(imageUrl);
-            console.log(`Frame ${i + 1} generated successfully`);
+            console.log(`Frame ${i + 1} generated successfully - Image URL length: ${imageUrl.length}`);
             continue;
+          } else {
+            console.log(`Frame ${i + 1} - No image URL in response. Message:`, JSON.stringify(editData.choices?.[0]?.message).substring(0, 500));
           }
         } else {
-          console.error(`Frame ${i + 1} generation failed:`, await editResponse.text());
+          const errorText = await editResponse.text();
+          console.error(`Frame ${i + 1} generation failed with status ${editResponse.status}:`, errorText.substring(0, 500));
+          
+          // Check if it's a rate limit error
+          if (editResponse.status === 429) {
+            console.log(`Frame ${i + 1} - Rate limited, waiting 2 seconds before retry...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Retry once
+            const retryResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash-image-preview",
+                messages: [
+                  {
+                    role: "user",
+                    content: [
+                      { type: "text", text: imagePrompt },
+                      { type: "image_url", image_url: { url: image1 } },
+                      { type: "image_url", image_url: { url: image2 } }
+                    ]
+                  }
+                ],
+                modalities: ["image", "text"]
+              }),
+            });
+
+            if (retryResponse.ok) {
+              const retryData = await retryResponse.json();
+              const retryImageUrl = retryData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+              if (retryImageUrl) {
+                frames.push(retryImageUrl);
+                console.log(`Frame ${i + 1} generated successfully on retry`);
+                continue;
+              }
+            }
+          }
         }
 
         // Fallback to placeholder
