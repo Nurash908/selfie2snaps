@@ -37,9 +37,11 @@ import Floating3DElement from "@/components/Floating3DElement";
 import MorphingBlob from "@/components/MorphingBlob";
 import SettingsPanel from "@/components/SettingsPanel";
 import GenerationNotification from "@/components/GenerationNotification";
+import MobileNavFAB from "@/components/MobileNavFAB";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
+import { useIsMobile } from "@/hooks/use-mobile";
 type AppState = "upload" | "configure" | "processing" | "scratch" | "result";
 const Index = () => {
   const [appState, setAppState] = useState<AppState>("upload");
@@ -105,6 +107,7 @@ const Index = () => {
   const {
     triggerHaptic
   } = useHapticFeedback();
+  const isMobile = useIsMobile();
 
   // Check if first-time user
   useEffect(() => {
@@ -361,75 +364,90 @@ const Index = () => {
       filter: "blur(30px)"
     }} />
 
-      {/* Auth, History, Favorites & Settings buttons */}
-      <div className="fixed top-4 right-4 z-40 gap-2 items-start justify-start flex flex-col">
-        {/* Settings Button */}
-        <motion.button onClick={() => {
-        playSound("click");
-        setShowSettings(true);
-      }} className="p-3 rounded-full backdrop-blur-xl border border-border/30 relative overflow-hidden group" style={{
-        background: "hsl(250 25% 12% / 0.8)"
-      }} whileHover={{
-        scale: 1.1
-      }} whileTap={{
-        scale: 0.95
-      }}>
-          <motion.div className="absolute inset-0 opacity-0 group-hover:opacity-100" style={{
-          background: "radial-gradient(circle, hsl(270 95% 65% / 0.2), transparent)"
-        }} />
-          <Settings className="w-5 h-5 text-muted-foreground" />
-        </motion.button>
-        
-        {user && <>
-            <motion.button onClick={() => {
-          playSound("click");
-          setShowHistory(true);
-        }} className="p-3 rounded-full backdrop-blur-xl border border-border/30 relative overflow-hidden group" style={{
-          background: "hsl(250 25% 12% / 0.8)"
-        }} whileHover={{
-          scale: 1.1
-        }} whileTap={{
-          scale: 0.95
-        }}>
-              <motion.div className="absolute inset-0 opacity-0 group-hover:opacity-100" style={{
-            background: "radial-gradient(circle, hsl(200 90% 55% / 0.2), transparent)"
-          }} />
-              <History className="w-5 h-5 text-blue-400" />
-            </motion.button>
-            <motion.button onClick={() => {
-          playSound("click");
-          setShowFavorites(true);
-        }} className="p-3 rounded-full backdrop-blur-xl border border-border/30 relative overflow-hidden group" style={{
-          background: "hsl(250 25% 12% / 0.8)"
-        }} whileHover={{
-          scale: 1.1
-        }} whileTap={{
-          scale: 0.95
-        }}>
-              <motion.div className="absolute inset-0 opacity-0 group-hover:opacity-100" style={{
-            background: "radial-gradient(circle, hsl(270 95% 65% / 0.2), transparent)"
-          }} />
-              <Heart className="w-5 h-5 text-primary" />
-            </motion.button>
-          </>}
-        <motion.button onClick={() => {
-        playSound("click");
-        if (user) {
+      {/* Mobile Navigation FAB */}
+      <MobileNavFAB
+        user={user}
+        onOpenSettings={() => setShowSettings(true)}
+        onOpenHistory={() => setShowHistory(true)}
+        onOpenFavorites={() => setShowFavorites(true)}
+        onOpenAuth={() => setShowAuthModal(true)}
+        onSignOut={() => {
           signOut();
           toast.success("Signed out");
-        } else {
-          setShowAuthModal(true);
-        }
-      }} className="p-3 rounded-full backdrop-blur-xl border border-border/30" style={{
-        background: "hsl(250 25% 12% / 0.8)"
-      }} whileHover={{
-        scale: 1.1
-      }} whileTap={{
-        scale: 0.95
-      }}>
-          {user ? <LogOut className="w-5 h-5 text-muted-foreground" /> : <UserIcon className="w-5 h-5 text-muted-foreground" />}
-        </motion.button>
-      </div>
+        }}
+      />
+
+      {/* Desktop Auth, History, Favorites & Settings buttons */}
+      {!isMobile && (
+        <div className="fixed top-4 right-4 z-40 gap-2 items-start justify-start flex flex-col">
+          {/* Settings Button */}
+          <motion.button onClick={() => {
+          playSound("click");
+          setShowSettings(true);
+        }} className="p-3 rounded-full backdrop-blur-xl border border-border/30 relative overflow-hidden group" style={{
+          background: "hsl(250 25% 12% / 0.8)"
+        }} whileHover={{
+          scale: 1.1
+        }} whileTap={{
+          scale: 0.95
+        }}>
+            <motion.div className="absolute inset-0 opacity-0 group-hover:opacity-100" style={{
+            background: "radial-gradient(circle, hsl(270 95% 65% / 0.2), transparent)"
+          }} />
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </motion.button>
+          
+          {user && <>
+              <motion.button onClick={() => {
+            playSound("click");
+            setShowHistory(true);
+          }} className="p-3 rounded-full backdrop-blur-xl border border-border/30 relative overflow-hidden group" style={{
+            background: "hsl(250 25% 12% / 0.8)"
+          }} whileHover={{
+            scale: 1.1
+          }} whileTap={{
+            scale: 0.95
+          }}>
+                <motion.div className="absolute inset-0 opacity-0 group-hover:opacity-100" style={{
+              background: "radial-gradient(circle, hsl(200 90% 55% / 0.2), transparent)"
+            }} />
+                <History className="w-5 h-5 text-blue-400" />
+              </motion.button>
+              <motion.button onClick={() => {
+            playSound("click");
+            setShowFavorites(true);
+          }} className="p-3 rounded-full backdrop-blur-xl border border-border/30 relative overflow-hidden group" style={{
+            background: "hsl(250 25% 12% / 0.8)"
+          }} whileHover={{
+            scale: 1.1
+          }} whileTap={{
+            scale: 0.95
+          }}>
+                <motion.div className="absolute inset-0 opacity-0 group-hover:opacity-100" style={{
+              background: "radial-gradient(circle, hsl(270 95% 65% / 0.2), transparent)"
+            }} />
+                <Heart className="w-5 h-5 text-primary" />
+              </motion.button>
+            </>}
+          <motion.button onClick={() => {
+          playSound("click");
+          if (user) {
+            signOut();
+            toast.success("Signed out");
+          } else {
+            setShowAuthModal(true);
+          }
+        }} className="p-3 rounded-full backdrop-blur-xl border border-border/30" style={{
+          background: "hsl(250 25% 12% / 0.8)"
+        }} whileHover={{
+          scale: 1.1
+        }} whileTap={{
+          scale: 0.95
+        }}>
+            {user ? <LogOut className="w-5 h-5 text-muted-foreground" /> : <UserIcon className="w-5 h-5 text-muted-foreground" />}
+          </motion.button>
+        </div>
+      )}
 
       <div className="container max-w-md mx-auto px-4 py-8 md:py-12 relative z-10">
         {/* Header with 3D Effects */}
