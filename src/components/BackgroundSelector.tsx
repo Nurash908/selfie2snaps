@@ -19,7 +19,8 @@ import {
   Camera,
   PartyPopper,
   Clock,
-  Heart
+  Heart,
+  Shuffle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -461,6 +462,25 @@ const BackgroundSelector = ({
                   </motion.button>
                 );
               })}
+              {/* Random Button */}
+              <motion.button
+                onClick={() => {
+                  if (filteredBackgrounds.length > 0) {
+                    playSound("click");
+                    const randomBg = filteredBackgrounds[Math.floor(Math.random() * filteredBackgrounds.length)];
+                    onSelect(randomBg.id, "preset");
+                    addToRecentlyUsed(randomBg.id);
+                    toast.success(`Random pick: ${randomBg.label}`);
+                  }
+                }}
+                disabled={filteredBackgrounds.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all bg-accent/50 text-accent-foreground border border-accent/30 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Shuffle className="w-3 h-3" />
+                Random
+              </motion.button>
             </div>
 
             {/* Favorites Section */}
