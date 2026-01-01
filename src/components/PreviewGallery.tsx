@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2, Twitter, Facebook, Instagram, Link, Check, Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +23,44 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
   const [savingFavorite, setSavingFavorite] = useState(false);
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
+
+  // Sync favorites on mount - check which frames are already favorited
+  useEffect(() => {
+    const syncFavorites = async () => {
+      if (!user || frames.length === 0) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('favorites')
+          .select('image_url')
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.error('Error fetching favorites for sync:', error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          const favoriteUrls = new Set(data.map(f => f.image_url));
+          const syncedFavorites = new Set<number>();
+          
+          frames.forEach((frame, index) => {
+            if (favoriteUrls.has(frame)) {
+              syncedFavorites.add(index);
+            }
+          });
+          
+          if (syncedFavorites.size > 0) {
+            setFavorites(syncedFavorites);
+          }
+        }
+      } catch (error) {
+        console.error('Error syncing favorites:', error);
+      }
+    };
+    
+    syncFavorites();
+  }, [user, frames]);
 
   const handlePrev = () => {
     playSound('click');
