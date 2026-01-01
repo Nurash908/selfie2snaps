@@ -653,6 +653,16 @@ const BackgroundSelector = ({
                   );
                 })}
               </div>
+            ) : activeCategory === "favorites" && favorites.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-8 text-center"
+              >
+                <Heart className="w-8 h-8 text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">No favorites yet</p>
+                <p className="text-xs text-muted-foreground/70">Click the heart icon on any background to save it</p>
+              </motion.div>
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
