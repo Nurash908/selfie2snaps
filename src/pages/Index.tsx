@@ -923,8 +923,27 @@ const Index = () => {
           vibe={selectedRatio} 
           onClose={() => setShowPreview(false)} 
           onOpenAuth={() => setShowAuthModal(true)}
-          onDeleteFrames={(indices) => {
+          onDeleteFrames={(indices, deletedFrames) => {
             setGeneratedFrames(prev => prev.filter((_, i) => !indices.includes(i)));
+            toast.success(`Deleted ${deletedFrames.length} frame${deletedFrames.length > 1 ? 's' : ''}`, {
+              action: {
+                label: 'Undo',
+                onClick: () => {
+                  // Restore frames at their original positions
+                  setGeneratedFrames(prev => {
+                    const restored = [...prev];
+                    // Sort by index ascending to insert in correct order
+                    const sortedDeleted = [...deletedFrames].sort((a, b) => a.index - b.index);
+                    sortedDeleted.forEach(({ index, frame }) => {
+                      restored.splice(index, 0, frame);
+                    });
+                    return restored;
+                  });
+                  toast.success('Frames restored');
+                },
+              },
+              duration: 5000,
+            });
           }}
         />}
       </AnimatePresence>

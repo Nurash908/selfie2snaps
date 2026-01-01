@@ -22,7 +22,7 @@ interface PreviewGalleryProps {
   vibe: string;
   onClose: () => void;
   onOpenAuth: () => void;
-  onDeleteFrames?: (indices: number[]) => void;
+  onDeleteFrames?: (indices: number[], deletedFrames: { index: number; frame: string }[]) => void;
 }
 
 const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth, onDeleteFrames }: PreviewGalleryProps) => {
@@ -716,7 +716,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth, onDeleteFrames }: P
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete {selectedFrames.size} frame{selectedFrames.size > 1 ? 's' : ''}?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. The selected frame{selectedFrames.size > 1 ? 's' : ''} will be permanently removed from this gallery.
+                    You can undo this action for a few seconds after deletion.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -725,14 +725,15 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth, onDeleteFrames }: P
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     onClick={() => {
                       const indicesToDelete = Array.from(selectedFrames).sort((a, b) => b - a);
-                      onDeleteFrames!(indicesToDelete);
+                      // Collect the frames being deleted with their indices
+                      const deletedFramesData = indicesToDelete.map(i => ({ index: i, frame: frames[i] }));
+                      onDeleteFrames!(indicesToDelete, deletedFramesData);
                       // Adjust current index if needed
                       if (currentIndex >= frames.length - selectedFrames.size) {
                         setCurrentIndex(Math.max(0, frames.length - selectedFrames.size - 1));
                       }
                       setSelectMode(false);
                       setSelectedFrames(new Set());
-                      toast.success(`Deleted ${indicesToDelete.length} frame${indicesToDelete.length > 1 ? 's' : ''}`);
                     }}
                   >
                     Delete
