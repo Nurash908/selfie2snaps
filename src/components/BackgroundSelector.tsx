@@ -184,6 +184,8 @@ const BackgroundSelector = ({
   const [activeCategory, setActiveCategory] = useState<BackgroundCategory>("all");
   const [recentlyUsed, setRecentlyUsed] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [isShuffling, setIsShuffling] = useState(false);
+  const [shuffleHighlight, setShuffleHighlight] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playSound } = useSoundEffects();
 
@@ -462,24 +464,53 @@ const BackgroundSelector = ({
                   </motion.button>
                 );
               })}
-              {/* Random Button */}
+              {/* Random/Shuffle Button */}
               <motion.button
                 onClick={() => {
-                  if (filteredBackgrounds.length > 0) {
+                  if (filteredBackgrounds.length > 0 && !isShuffling) {
+                    setIsShuffling(true);
                     playSound("click");
-                    const randomBg = filteredBackgrounds[Math.floor(Math.random() * filteredBackgrounds.length)];
-                    onSelect(randomBg.id, "preset");
-                    addToRecentlyUsed(randomBg.id);
-                    toast.success(`Random pick: ${randomBg.label}`);
+                    
+                    // Shuffle animation - cycle through backgrounds
+                    const shuffleCount = Math.min(12, filteredBackgrounds.length * 2);
+                    const shuffleDuration = 80; // ms per cycle
+                    let currentIndex = 0;
+                    
+                    const shuffleInterval = setInterval(() => {
+                      const randomIndex = Math.floor(Math.random() * filteredBackgrounds.length);
+                      setShuffleHighlight(filteredBackgrounds[randomIndex].id);
+                      currentIndex++;
+                      
+                      if (currentIndex >= shuffleCount) {
+                        clearInterval(shuffleInterval);
+                        // Final pick with a slight delay
+                        setTimeout(() => {
+                          const finalBg = filteredBackgrounds[Math.floor(Math.random() * filteredBackgrounds.length)];
+                          setShuffleHighlight(finalBg.id);
+                          onSelect(finalBg.id, "preset");
+                          addToRecentlyUsed(finalBg.id);
+                          playSound("success");
+                          toast.success(`Random pick: ${finalBg.label}`);
+                          
+                          // Clear highlight after a moment
+                          setTimeout(() => {
+                            setShuffleHighlight(null);
+                            setIsShuffling(false);
+                          }, 500);
+                        }, 150);
+                      }
+                    }, shuffleDuration);
                   }
                 }}
-                disabled={filteredBackgrounds.length === 0}
+                disabled={filteredBackgrounds.length === 0 || isShuffling}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all bg-accent/50 text-accent-foreground border border-accent/30 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                animate={isShuffling ? { scale: [1, 1.05, 1] } : {}}
+                transition={isShuffling ? { duration: 0.3, repeat: Infinity } : {}}
               >
-                <Shuffle className="w-3 h-3" />
-                Random
+                <Shuffle className={`w-3 h-3 ${isShuffling ? "animate-spin" : ""}`} />
+                {isShuffling ? "Shuffling..." : "Shuffle"}
               </motion.button>
             </div>
 
@@ -649,20 +680,27 @@ const BackgroundSelector = ({
                 {filteredBackgrounds.map((bg) => {
                   const isSelected = selected === bg.id;
                   const isFavorite = favorites.includes(bg.id);
+                  const isShuffleHighlighted = shuffleHighlight === bg.id;
                   return (
                     <HoverCard key={bg.id} openDelay={400} closeDelay={100}>
                       <HoverCardTrigger asChild>
                         <motion.button
                           onClick={() => {
-                            playSound("click");
-                            onSelect(bg.id, "preset");
-                            addToRecentlyUsed(bg.id);
+                            if (!isShuffling) {
+                              playSound("click");
+                              onSelect(bg.id, "preset");
+                              addToRecentlyUsed(bg.id);
+                            }
                           }}
-                          className={`relative aspect-[4/3] rounded-lg overflow-hidden ${
+                          className={`relative aspect-[4/3] rounded-lg overflow-hidden transition-all ${
                             isSelected ? "ring-2 ring-primary" : ""
-                          }`}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+                          } ${isShuffleHighlighted ? "ring-2 ring-accent shadow-lg shadow-accent/50" : ""}`}
+                          whileHover={!isShuffling ? { scale: 1.05 } : {}}
+                          whileTap={!isShuffling ? { scale: 0.95 } : {}}
+                          animate={isShuffleHighlighted ? { 
+                            scale: [1, 1.1, 1],
+                            transition: { duration: 0.15 }
+                          } : {}}
                           layout
                         >
                           <img
@@ -670,7 +708,11 @@ const BackgroundSelector = ({
                             alt={bg.label}
                             className="w-full h-full object-cover"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                          <div className={`absolute inset-0 transition-colors ${
+                            isShuffleHighlighted 
+                              ? "bg-gradient-to-t from-accent/60 to-accent/20" 
+                              : "bg-gradient-to-t from-background/80 to-transparent"
+                          }`} />
                           <span className="absolute bottom-1 left-1 right-4 text-[10px] font-medium text-foreground truncate">
                             {bg.label}
                           </span>
@@ -683,7 +725,7 @@ const BackgroundSelector = ({
                           >
                             <Heart className={`w-3 h-3 transition-colors ${isFavorite ? "text-destructive fill-destructive" : "text-muted-foreground hover:text-destructive"}`} />
                           </motion.button>
-                          {isSelected && (
+                          {isSelected && !isShuffleHighlighted && (
                             <motion.div
                               className="absolute top-1 left-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center"
                               initial={{ scale: 0 }}
@@ -691,6 +733,14 @@ const BackgroundSelector = ({
                             >
                               <Check className="w-2.5 h-2.5 text-primary-foreground" />
                             </motion.div>
+                          )}
+                          {isShuffleHighlighted && (
+                            <motion.div
+                              className="absolute inset-0 border-2 border-accent rounded-lg"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                            />
                           )}
                         </motion.button>
                       </HoverCardTrigger>
