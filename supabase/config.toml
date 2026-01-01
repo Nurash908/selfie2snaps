@@ -2,3 +2,6 @@ project_id = "pkoaewezgeyhivzzhvbf"
 
 [functions.generate-snap]
 verify_jwt = true
+
+[functions.generate-background]
+verify_jwt = false
