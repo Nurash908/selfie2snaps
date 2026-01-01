@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2, Twitter, Facebook, Instagram, Link, Check, Sparkles, Loader2, Archive } from 'lucide-react';
+import { Download, Heart, X, ChevronLeft, ChevronRight, Share2, Maximize2, Twitter, Facebook, Instagram, Link, Check, Sparkles, Loader2, Archive, CheckSquare, Square } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
@@ -24,6 +24,8 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [zipProgress, setZipProgress] = useState(0);
   const [savingFavorite, setSavingFavorite] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedFrames, setSelectedFrames] = useState<Set<number>>(new Set());
   const { user } = useAuth();
   const { playSound } = useSoundEffects();
 
@@ -101,8 +103,15 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
     }
   };
 
-  const handleDownloadAll = async () => {
-    if (frames.length === 0) return;
+  const handleDownloadSelected = async () => {
+    const framesToDownload = selectMode && selectedFrames.size > 0 
+      ? Array.from(selectedFrames).sort((a, b) => a - b)
+      : frames.map((_, i) => i);
+    
+    if (framesToDownload.length === 0) {
+      toast.error('No frames selected');
+      return;
+    }
     
     playSound('download');
     setDownloadingAll(true);
@@ -110,12 +119,13 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
     
     try {
       const zip = new JSZip();
-      const totalSteps = frames.length + 1; // +1 for zip generation
+      const totalSteps = framesToDownload.length + 1;
       
-      for (let i = 0; i < frames.length; i++) {
-        const response = await fetch(frames[i]);
+      for (let i = 0; i < framesToDownload.length; i++) {
+        const frameIndex = framesToDownload[i];
+        const response = await fetch(frames[frameIndex]);
         const blob = await response.blob();
-        zip.file(`selfie2snap-${i + 1}.jpg`, blob);
+        zip.file(`selfie2snap-${frameIndex + 1}.jpg`, blob);
         setZipProgress(Math.round(((i + 1) / totalSteps) * 100));
       }
       
@@ -124,8 +134,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
         compression: 'DEFLATE',
         compressionOptions: { level: 6 },
       }, (metadata) => {
-        // Progress during zip generation (last step)
-        const baseProgress = Math.round((frames.length / totalSteps) * 100);
+        const baseProgress = Math.round((framesToDownload.length / totalSteps) * 100);
         const zipGenProgress = Math.round((metadata.percent / 100) * (100 - baseProgress));
         setZipProgress(baseProgress + zipGenProgress);
       });
@@ -133,19 +142,55 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `selfie2snap-all-${Date.now()}.zip`;
+      a.download = `selfie2snap-${framesToDownload.length === frames.length ? 'all' : 'selected'}-${Date.now()}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      toast.success(`Downloaded ${frames.length} frames as zip! 🎉`);
+      toast.success(`Downloaded ${framesToDownload.length} frame${framesToDownload.length > 1 ? 's' : ''} as zip! 🎉`);
+      
+      // Exit select mode after download
+      if (selectMode) {
+        setSelectMode(false);
+        setSelectedFrames(new Set());
+      }
     } catch (error) {
       console.error('Error creating zip:', error);
       toast.error('Failed to create zip file');
     } finally {
       setDownloadingAll(false);
       setZipProgress(0);
+    }
+  };
+
+  const toggleFrameSelection = (index: number) => {
+    setSelectedFrames(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFrames.size === frames.length) {
+      setSelectedFrames(new Set());
+    } else {
+      setSelectedFrames(new Set(frames.map((_, i) => i)));
+    }
+  };
+
+  const toggleSelectMode = () => {
+    if (selectMode) {
+      setSelectMode(false);
+      setSelectedFrames(new Set());
+    } else {
+      setSelectMode(true);
+      setSelectedFrames(new Set(frames.map((_, i) => i))); // Select all by default
     }
   };
 
@@ -491,16 +536,22 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
               <motion.button
                 key={index}
                 className={`relative w-16 h-20 rounded-lg overflow-hidden flex-shrink-0 ${
-                  currentIndex === index ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
-                }`}
+                  currentIndex === index && !selectMode ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+                } ${selectMode && selectedFrames.has(index) ? 'ring-2 ring-green-500 ring-offset-2 ring-offset-background' : ''}`}
                 onClick={() => {
                   playSound('click');
-                  setCurrentIndex(index);
+                  if (selectMode) {
+                    toggleFrameSelection(index);
+                  } else {
+                    setCurrentIndex(index);
+                  }
                 }}
                 whileHover={{ scale: 1.1, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 style={{
-                  boxShadow: currentIndex === index
+                  boxShadow: selectMode && selectedFrames.has(index)
+                    ? '0 0 25px hsl(142 76% 36% / 0.5)'
+                    : currentIndex === index && !selectMode
                     ? '0 0 25px hsl(270 95% 65% / 0.5)'
                     : '0 4px 10px hsl(0 0% 0% / 0.2)',
                 }}
@@ -510,7 +561,23 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
                   alt={`Thumbnail ${index + 1}`}
                   className="w-full h-full object-cover"
                 />
-                {favorites.has(index) && (
+                {/* Selection checkbox overlay */}
+                {selectMode && (
+                  <motion.div
+                    className={`absolute inset-0 flex items-center justify-center ${
+                      selectedFrames.has(index) ? 'bg-green-500/30' : 'bg-background/50'
+                    }`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    {selectedFrames.has(index) ? (
+                      <CheckSquare className="w-6 h-6 text-green-400 drop-shadow-lg" />
+                    ) : (
+                      <Square className="w-6 h-6 text-muted-foreground drop-shadow-lg" />
+                    )}
+                  </motion.div>
+                )}
+                {favorites.has(index) && !selectMode && (
                   <motion.div
                     className="absolute top-1 right-1"
                     initial={{ scale: 0, rotate: -180 }}
@@ -521,7 +588,7 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
                   </motion.div>
                 )}
                 {/* Active indicator */}
-                {currentIndex === index && (
+                {currentIndex === index && !selectMode && (
                   <motion.div
                     className="absolute inset-0 bg-primary/10"
                     layoutId="activeThumb"
@@ -558,14 +625,58 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
               </motion.button>
             )}
             
-            {/* Download All as Zip Button */}
+            {/* Select Frames Button */}
+            {frames.length > 1 && (
+              <motion.button
+                className={`p-2 sm:p-3 rounded-xl font-medium flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${
+                  selectMode
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                    : 'bg-card/60 text-muted-foreground hover:bg-card/80 hover:text-foreground'
+                }`}
+                onClick={toggleSelectMode}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {selectMode ? (
+                  <X className="w-4 h-4" />
+                ) : (
+                  <CheckSquare className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {selectMode ? 'Cancel' : 'Select'}
+                </span>
+              </motion.button>
+            )}
+            
+            {/* Select All / None Button (only in select mode) */}
+            {selectMode && (
+              <motion.button
+                className="p-2 sm:p-3 rounded-xl font-medium flex items-center gap-1 sm:gap-2 text-xs sm:text-sm bg-card/60 text-muted-foreground hover:bg-card/80 hover:text-foreground"
+                onClick={toggleSelectAll}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                {selectedFrames.size === frames.length ? (
+                  <Square className="w-4 h-4" />
+                ) : (
+                  <CheckSquare className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {selectedFrames.size === frames.length ? 'None' : 'All'}
+                </span>
+              </motion.button>
+            )}
+            
+            {/* Download Zip Button */}
             {frames.length > 1 && (
               <motion.button
                 className="p-2 sm:p-3 rounded-xl font-medium flex items-center gap-1 sm:gap-2 text-xs sm:text-sm bg-card/60 text-muted-foreground hover:bg-card/80 hover:text-foreground relative overflow-hidden"
-                onClick={handleDownloadAll}
+                onClick={handleDownloadSelected}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                disabled={downloadingAll}
+                disabled={downloadingAll || (selectMode && selectedFrames.size === 0)}
               >
                 {/* Progress bar background */}
                 {downloadingAll && (
@@ -583,7 +694,11 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
                     <Archive className="w-4 h-4" />
                   )}
                   <span className="hidden sm:inline">
-                    {downloadingAll ? `${zipProgress}%` : 'Download All'}
+                    {downloadingAll 
+                      ? `${zipProgress}%` 
+                      : selectMode 
+                        ? `Zip (${selectedFrames.size})` 
+                        : 'Download All'}
                   </span>
                 </span>
               </motion.button>
