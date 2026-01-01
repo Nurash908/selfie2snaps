@@ -82,8 +82,23 @@ const PreviewGallery = ({ frames, vibe, onClose, onOpenAuth }: PreviewGalleryPro
         .maybeSingle();
 
       if (existing) {
-        toast.info('Already in favorites');
-        setFavorites(prev => new Set([...prev, index]));
+        // Remove from favorites
+        const { error: deleteError } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('id', existing.id);
+
+        if (deleteError) {
+          console.error('Supabase delete error:', deleteError);
+          throw deleteError;
+        }
+
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(index);
+          return newSet;
+        });
+        toast.success('Removed from favorites');
         setSavingFavorite(false);
         return;
       }
