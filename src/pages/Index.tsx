@@ -38,6 +38,7 @@ import MorphingBlob from "@/components/MorphingBlob";
 import SettingsPanel from "@/components/SettingsPanel";
 import GenerationNotification from "@/components/GenerationNotification";
 import MobileNavFAB from "@/components/MobileNavFAB";
+import WhySelfie2Snap from "@/components/WhySelfie2Snap";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -584,42 +585,55 @@ const Index = () => {
             </motion.span>
           </motion.h1>
 
-          <motion.p className="text-xs font-mono tracking-[0.3em] text-muted-foreground uppercase mb-6" initial={{
+          {/* Main Tagline */}
+          <motion.p 
+            className="text-lg md:text-xl font-medium text-foreground mb-2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <motion.span
+              animate={{
+                textShadow: [
+                  "0 0 10px hsl(270 95% 65% / 0.3)",
+                  "0 0 20px hsl(270 95% 65% / 0.5)",
+                  "0 0 10px hsl(270 95% 65% / 0.3)",
+                ],
+              }}
+              transition={{ duration: 2.5, repeat: Infinity }}
+            >
+              Upload a Selfie. Get an AI Snap in Seconds.
+            </motion.span>
+          </motion.p>
+
+          {/* Subtitle */}
+          <motion.p 
+            className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto mb-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+          >
+            Upload your selfie and instantly generate a stylized AI snap you can share anywhere.
+          </motion.p>
+
+          {/* Creator credit */}
+          <motion.p className="text-xs font-mono tracking-[0.3em] text-muted-foreground/70 uppercase" initial={{
           opacity: 0,
           y: 10
         }} animate={{
           opacity: 1,
           y: 0
         }} transition={{
-          delay: 0.5
+          delay: 0.7
         }}>
             <motion.span animate={{
-            opacity: [0.7, 1, 0.7]
+            opacity: [0.5, 0.8, 0.5]
           }} transition={{
-            duration: 2,
+            duration: 3,
             repeat: Infinity
           }}>
               Created by Nurash Weerasinghe
             </motion.span>
-          </motion.p>
-
-          <motion.p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto" initial={{
-          opacity: 0
-        }} animate={{
-          opacity: 1
-        }} transition={{
-          delay: 0.7
-        }}>
-            Fuse two realities into one perfect cinematic moment using{" "}
-            <motion.span className="text-secondary font-medium" animate={{
-            textShadow: ["0 0 8px hsl(35 100% 60% / 0)", "0 0 12px hsl(35 100% 60% / 0.5)", "0 0 8px hsl(35 100% 60% / 0)"]
-          }} transition={{
-            duration: 2,
-            repeat: Infinity
-          }}>
-              Nano Banana's
-            </motion.span>{" "}
-            neural engine.
           </motion.p>
         </motion.header>
 
@@ -791,6 +805,9 @@ const Index = () => {
                   </motion.div>}
               </AnimatePresence>
 
+              {/* Why Selfie2Snap Trust Section */}
+              <WhySelfie2Snap />
+
               {/* Feature Cards */}
               <FeatureCards />
             </motion.div>}
@@ -897,17 +914,39 @@ const Index = () => {
         </AnimatePresence>
 
         {/* Footer */}
-        <motion.footer className="mt-16 text-center" initial={{
+        <motion.footer className="mt-16 pt-8 border-t border-border/20 text-center" initial={{
         opacity: 0
       }} animate={{
         opacity: 1
       }} transition={{
         delay: 1.5
       }}>
-          <div className="inline-flex items-center gap-2 text-xs font-mono text-muted-foreground">
-            <span>Powered by</span>
-            <span className="text-secondary">Nano Banana AI</span>
-            <span>🍌</span>
+          <div className="flex flex-col items-center gap-3">
+            <div className="inline-flex items-center gap-2 text-xs font-mono text-muted-foreground">
+              <span>Powered by</span>
+              <motion.span 
+                className="text-secondary font-medium"
+                animate={{
+                  textShadow: [
+                    "0 0 8px hsl(35 100% 60% / 0)",
+                    "0 0 12px hsl(35 100% 60% / 0.4)",
+                    "0 0 8px hsl(35 100% 60% / 0)",
+                  ],
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                Nano Banana AI
+              </motion.span>
+              <motion.span
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+              >
+                🍌
+              </motion.span>
+            </div>
+            <p className="text-xs text-muted-foreground/50 font-mono">
+              Selfie2Snap © {new Date().getFullYear()}
+            </p>
           </div>
         </motion.footer>
       </div>
