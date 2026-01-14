@@ -39,6 +39,7 @@ import SettingsPanel from "@/components/SettingsPanel";
 import GenerationNotification from "@/components/GenerationNotification";
 import MobileNavFAB from "@/components/MobileNavFAB";
 import WhySelfie2Snap from "@/components/WhySelfie2Snap";
+import StyleSampleGallery from "@/components/StyleSampleGallery";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -804,6 +805,9 @@ const Index = () => {
                     </GlowingBorder>
                   </motion.div>}
               </AnimatePresence>
+
+              {/* Style Sample Gallery */}
+              <StyleSampleGallery />
 
               {/* Why Selfie2Snap Trust Section */}
               <WhySelfie2Snap />
