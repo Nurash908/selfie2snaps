@@ -232,7 +232,7 @@ const GenerateButton = ({
                   ? "text-muted-foreground/50"
                   : "text-foreground group-hover:text-secondary"
             } transition-colors`}>
-              {isGenerating ? "Creating Magic..." : "Generate Selfie Snap"}
+              {isGenerating ? "Creating Magic..." : "Create My Snap ✨"}
             </span>
             {!isGenerating && !disabled && (
               <motion.span 
@@ -240,7 +240,7 @@ const GenerateButton = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                ✨ AI-powered transformation
+                Turn your selfie into AI art
               </motion.span>
             )}
           </div>
