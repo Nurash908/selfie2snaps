@@ -40,6 +40,8 @@ import GenerationNotification from "@/components/GenerationNotification";
 import MobileNavFAB from "@/components/MobileNavFAB";
 import WhySelfie2Snap from "@/components/WhySelfie2Snap";
 import StyleSampleGallery from "@/components/StyleSampleGallery";
+import BeforeAfterSlider from "@/components/BeforeAfterSlider";
+import TryAnotherButton from "@/components/TryAnotherButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -338,6 +340,19 @@ const Index = () => {
     setNarrative("");
     setProgress(0);
     setProgressStatus("System Ready");
+  };
+  
+  // Try another selfie - keeps style preferences, clears images
+  const handleTryAnother = () => {
+    playSound("reset");
+    setAppState("upload");
+    setImage1(null);
+    setImage2(null);
+    setGeneratedFrames([]);
+    setNarrative("");
+    setProgress(0);
+    setProgressStatus("System Ready");
+    // Note: selectedStyle, selectedScene, selectedRatio are preserved
   };
   const handleAddFrame = () => {
     if (frameCount < 2) {
@@ -853,6 +868,30 @@ const Index = () => {
                 <NarrativeCaption caption={narrative} />
               </Floating3DElement>
 
+              {/* Before vs After Comparison Slider */}
+              {image1 && generatedFrames.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <motion.h3 
+                    className="text-center text-sm font-mono text-muted-foreground mb-3 uppercase tracking-wider"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    Before & After
+                  </motion.h3>
+                  <BeforeAfterSlider
+                    beforeImage={image1}
+                    afterImage={generatedFrames[0]}
+                    beforeLabel="Selfie"
+                    afterLabel="AI Snap"
+                  />
+                </motion.div>
+              )}
+
               <FilmStrip frames={generatedFrames} onBless={() => toast.success("Blessings sent! 💛")} />
 
               <div className="flex flex-col items-center gap-4">
@@ -911,6 +950,9 @@ const Index = () => {
               link.click();
               toast.success("Downloaded!");
             }} />}
+
+                {/* Try Another Selfie Button */}
+                <TryAnotherButton onTryAnother={handleTryAnother} preserveSettings={true} />
               </div>
               
               <GenerateButton onGenerate={handleTransform} onReset={handleReset} isGenerating={isGenerating} disabled={false} />
