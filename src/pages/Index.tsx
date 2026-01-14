@@ -42,6 +42,8 @@ import WhySelfie2Snap from "@/components/WhySelfie2Snap";
 import StyleSampleGallery from "@/components/StyleSampleGallery";
 import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import TryAnotherButton from "@/components/TryAnotherButton";
+import SideBySideComparison from "@/components/SideBySideComparison";
+import QuickRegenerateButton from "@/components/QuickRegenerateButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -66,7 +68,7 @@ const Index = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showStylePreview, setShowStylePreview] = useState(false);
-  
+  const [comparisonMode, setComparisonMode] = useState<"slider" | "sidebyside">("slider");
   // Background options state
   const [backgroundType, setBackgroundType] = useState<"preset" | "custom" | "ai">("preset");
   const [customBackground, setCustomBackground] = useState<string | null>(null);
@@ -354,6 +356,15 @@ const Index = () => {
     setProgressStatus("System Ready");
     // Note: selectedStyle, selectedScene, selectedRatio are preserved
   };
+  
+  // Quick regenerate with random style
+  const handleQuickRegenerate = async (randomStyle: string) => {
+    setSelectedStyle(randomStyle);
+    toast.success(`Trying ${randomStyle} style! 🎨`);
+    // Trigger regeneration
+    await handleTransform();
+  };
+  
   const handleAddFrame = () => {
     if (frameCount < 2) {
       setFrameCount(frameCount + 1);
@@ -868,27 +879,68 @@ const Index = () => {
                 <NarrativeCaption caption={narrative} />
               </Floating3DElement>
 
-              {/* Before vs After Comparison Slider */}
-              {image1 && generatedFrames.length > 0 && (
+              {/* Comparison Section */}
+              {(image1 || image2) && generatedFrames.length > 0 && (
                 <motion.div
+                  className="space-y-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <motion.h3 
-                    className="text-center text-sm font-mono text-muted-foreground mb-3 uppercase tracking-wider"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    Before & After
-                  </motion.h3>
-                  <BeforeAfterSlider
-                    beforeImage={image1}
-                    afterImage={generatedFrames[0]}
-                    beforeLabel="Selfie"
-                    afterLabel="AI Snap"
-                  />
+                  {/* Mode Toggle */}
+                  <div className="flex justify-center gap-2">
+                    <motion.button
+                      onClick={() => setComparisonMode("slider")}
+                      className={`px-4 py-2 rounded-lg font-mono text-xs tracking-wider transition-all ${
+                        comparisonMode === "slider"
+                          ? "text-white"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      style={{
+                        background: comparisonMode === "slider"
+                          ? "linear-gradient(135deg, hsl(270 95% 55%), hsl(35 100% 55%))"
+                          : "hsl(250 25% 15%)",
+                        border: comparisonMode === "slider" ? "none" : "1px solid hsl(0 0% 100% / 0.1)",
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      🎚️ Slider
+                    </motion.button>
+                    <motion.button
+                      onClick={() => setComparisonMode("sidebyside")}
+                      className={`px-4 py-2 rounded-lg font-mono text-xs tracking-wider transition-all ${
+                        comparisonMode === "sidebyside"
+                          ? "text-white"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      style={{
+                        background: comparisonMode === "sidebyside"
+                          ? "linear-gradient(135deg, hsl(270 95% 55%), hsl(35 100% 55%))"
+                          : "hsl(250 25% 15%)",
+                        border: comparisonMode === "sidebyside" ? "none" : "1px solid hsl(0 0% 100% / 0.1)",
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      📊 Side by Side
+                    </motion.button>
+                  </div>
+
+                  {/* Comparison Views */}
+                  {comparisonMode === "slider" ? (
+                    <BeforeAfterSlider
+                      beforeImage={image1 || image2 || ""}
+                      afterImage={generatedFrames[0]}
+                      beforeLabel="Selfie"
+                      afterLabel="AI Snap"
+                    />
+                  ) : (
+                    <SideBySideComparison
+                      beforeImages={[image1, image2].filter(Boolean) as string[]}
+                      afterImage={generatedFrames[0]}
+                    />
+                  )}
                 </motion.div>
               )}
 
@@ -938,6 +990,12 @@ const Index = () => {
                     <Palette className="w-4 h-4 text-primary" />
                     <span className="text-muted-foreground">Try Styles</span>
                   </motion.button>
+                  
+                  {/* Quick Regenerate Button */}
+                  <QuickRegenerateButton
+                    onRegenerate={handleQuickRegenerate}
+                    isGenerating={isGenerating}
+                  />
                 </div>
 
                 {/* Social Share Buttons */}
