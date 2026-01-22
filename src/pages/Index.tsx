@@ -44,6 +44,7 @@ import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import TryAnotherButton from "@/components/TryAnotherButton";
 import SideBySideComparison from "@/components/SideBySideComparison";
 import QuickRegenerateButton from "@/components/QuickRegenerateButton";
+import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -1107,6 +1108,9 @@ const Index = () => {
 
       {/* Image Cropper */}
       {cropImage && <ImageCropper image={cropImage.image} onCropComplete={handleCropComplete} onCancel={() => setCropImage(null)} />}
+      
+      {/* Footer */}
+      <Footer />
     </div>;
 };
 export default Index;
