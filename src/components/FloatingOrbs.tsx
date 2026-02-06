@@ -17,7 +17,7 @@ const FloatingOrbs = ({ intensity = "medium" }: FloatingOrbsProps) => {
   }>>([]);
 
   useEffect(() => {
-    const orbCount = intensity === "low" ? 5 : intensity === "medium" ? 8 : 12;
+    const orbCount = intensity === "low" ? 3 : intensity === "medium" ? 5 : 8;
     const colors = [
       "hsl(270 95% 65%)",
       "hsl(35 100% 60%)",
@@ -30,9 +30,9 @@ const FloatingOrbs = ({ intensity = "medium" }: FloatingOrbsProps) => {
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
-      size: 60 + Math.random() * 120,
+      size: 80 + Math.random() * 100,
       color: colors[i % colors.length],
-      duration: 15 + Math.random() * 20,
+      duration: 20 + Math.random() * 15,
       delay: Math.random() * 5,
     }));
 
@@ -50,14 +50,12 @@ const FloatingOrbs = ({ intensity = "medium" }: FloatingOrbsProps) => {
             height: orb.size,
             left: `${orb.x}%`,
             top: `${orb.y}%`,
-            background: `radial-gradient(circle at 30% 30%, ${orb.color}20, transparent 70%)`,
-            filter: "blur(40px)",
+            background: `radial-gradient(circle at 30% 30%, ${orb.color}15, transparent 70%)`,
           }}
           animate={{
-            x: [0, 100, -50, 80, 0],
-            y: [0, -80, 60, -40, 0],
-            scale: [1, 1.2, 0.9, 1.1, 1],
-            opacity: [0.3, 0.5, 0.4, 0.6, 0.3],
+            x: [0, 80, -40, 60, 0],
+            y: [0, -60, 40, -30, 0],
+            opacity: [0.2, 0.4, 0.3, 0.5, 0.2],
           }}
           transition={{
             duration: orb.duration,
@@ -67,24 +65,6 @@ const FloatingOrbs = ({ intensity = "medium" }: FloatingOrbsProps) => {
           }}
         />
       ))}
-      
-      {/* Central gradient pulse */}
-      <motion.div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full"
-        style={{
-          background: "radial-gradient(circle, hsl(270 95% 65% / 0.05), transparent 70%)",
-          filter: "blur(60px)",
-        }}
-        animate={{
-          scale: [1, 1.3, 1],
-          opacity: [0.2, 0.4, 0.2],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      />
     </div>
   );
 };

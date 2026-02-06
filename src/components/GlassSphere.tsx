@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, User, Camera, Sparkles, Check } from "lucide-react";
+import { Upload, User, Camera, Check } from "lucide-react";
 import { useState, useCallback, useRef } from "react";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 
@@ -17,7 +17,6 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
   const [isAbsorbing, setIsAbsorbing] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
   const [isHovered, setIsHovered] = useState(false);
-  const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
   const sphereRef = useRef<HTMLDivElement>(null);
   const { playSound } = useSoundEffects();
 
@@ -37,10 +36,6 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("image/")) {
       playSound('upload');
-      const rect = sphereRef.current?.getBoundingClientRect();
-      if (rect) {
-        setRipples(prev => [...prev, { id: Date.now(), x: e.clientX - rect.left, y: e.clientY - rect.top }]);
-      }
       setIsAbsorbing(true);
       setTimeout(() => {
         onImageUpload(file);
@@ -53,7 +48,6 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
     const file = e.target.files?.[0];
     if (file) {
       playSound('upload');
-      setRipples(prev => [...prev, { id: Date.now(), x: 100, y: 100 }]);
       setIsAbsorbing(true);
       setTimeout(() => {
         onImageUpload(file);
@@ -62,7 +56,6 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
     }
   }, [onImageUpload, playSound]);
 
-  // 3D rotation based on mouse position
   const rotateX = (mousePos.y - 0.5) * -20;
   const rotateY = (mousePos.x - 0.5) * 20;
 
@@ -76,43 +69,18 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
     >
       {/* Outer glow ring */}
       <motion.div
-        className="absolute -inset-4 rounded-full blur-2xl"
+        className="absolute -inset-4 rounded-full"
         style={{
           background: variant === "left"
-            ? "radial-gradient(circle, hsl(270 95% 65% / 0.4), transparent 70%)"
-            : "radial-gradient(circle, hsl(35 100% 60% / 0.4), transparent 70%)",
+            ? "radial-gradient(circle, hsl(270 95% 65% / 0.3), transparent 70%)"
+            : "radial-gradient(circle, hsl(35 100% 60% / 0.3), transparent 70%)",
         }}
         animate={{
-          scale: isDragging ? 1.5 : isConnected ? [1, 1.2, 1] : 1,
-          opacity: isDragging ? 1 : isConnected ? [0.4, 0.7, 0.4] : 0.3,
+          scale: isDragging ? 1.5 : isConnected ? [1, 1.15, 1] : 1,
+          opacity: isDragging ? 0.8 : isConnected ? [0.3, 0.5, 0.3] : 0.2,
         }}
-        transition={{ duration: 2, repeat: isConnected ? Infinity : 0 }}
+        transition={{ duration: 3, repeat: isConnected ? Infinity : 0 }}
       />
-
-      {/* Orbiting particles when connected */}
-      {isConnected && [...Array(6)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute w-2 h-2 rounded-full"
-          style={{
-            background: i % 2 === 0 ? "hsl(270 95% 75%)" : "hsl(35 100% 70%)",
-            left: "50%",
-            top: "50%",
-          }}
-          animate={{
-            x: Math.cos((i / 6) * Math.PI * 2 + Date.now() / 1000) * 120,
-            y: Math.sin((i / 6) * Math.PI * 2 + Date.now() / 1000) * 120,
-            scale: [0.5, 1, 0.5],
-            opacity: [0.3, 0.8, 0.3],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            delay: i * 0.5,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
 
       {/* Main sphere with 3D effect */}
       <motion.div
@@ -128,8 +96,8 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
           boxShadow: `
             inset 0 2px 4px hsl(0 0% 100% / 0.1),
             inset 0 -10px 20px hsl(0 0% 0% / 0.3),
-            0 0 60px ${variant === "left" ? "hsl(270 95% 65% / 0.25)" : "hsl(35 100% 60% / 0.25)"},
-            0 30px 60px hsl(0 0% 0% / 0.4)
+            0 0 40px ${variant === "left" ? "hsl(270 95% 65% / 0.2)" : "hsl(35 100% 60% / 0.2)"},
+            0 20px 40px hsl(0 0% 0% / 0.3)
           `,
           transformStyle: "preserve-3d",
         }}
@@ -137,7 +105,7 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
           scale: isDragging ? 1.15 : isAbsorbing ? 0.9 : 1,
           rotateX: isDragging ? 0 : rotateX,
           rotateY: isDragging ? 0 : rotateY,
-          y: [0, -15, 0],
+          y: [0, -10, 0],
         }}
         transition={{
           scale: { duration: 0.4, type: "spring" },
@@ -177,9 +145,9 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
             <motion.div
               key="image"
               className="absolute inset-0 rounded-full overflow-hidden"
-              initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              exit={{ opacity: 0, scale: 0.5, rotate: 10 }}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5 }}
               transition={{ duration: 0.5, type: "spring" }}
             >
               <motion.img
@@ -192,7 +160,7 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
                 transition={{ duration: 0.3 }}
               />
               
-              {/* Premium blur overlay on hover */}
+              {/* Hover overlay */}
               <AnimatePresence>
                 {isHovered && (
                   <motion.div
@@ -227,17 +195,6 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
                 )}
               </AnimatePresence>
 
-              {/* Overlay shimmer */}
-              <motion.div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: "linear-gradient(135deg, transparent 40%, hsl(0 0% 100% / 0.15) 50%, transparent 60%)",
-                  backgroundSize: "200% 200%",
-                }}
-                animate={{ backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"] }}
-                transition={{ duration: 4, repeat: Infinity }}
-              />
-
               {/* Success indicator */}
               <motion.div
                 className="absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center z-20"
@@ -268,16 +225,6 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
                 }}
                 transition={{ duration: 0.3 }}
               >
-                <motion.div
-                  className="absolute -inset-3 rounded-full"
-                  style={{
-                    background: variant === "left"
-                      ? "radial-gradient(circle, hsl(270 95% 65% / 0.3), transparent)"
-                      : "radial-gradient(circle, hsl(35 100% 60% / 0.3), transparent)",
-                  }}
-                  animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
                 {variant === "left" ? (
                   <Camera className="w-14 h-14 text-primary relative z-10" />
                 ) : (
@@ -301,25 +248,6 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
           )}
         </AnimatePresence>
 
-        {/* Ripple effects on upload */}
-        {ripples.map((ripple) => (
-          <motion.div
-            key={ripple.id}
-            className="absolute rounded-full border-2 pointer-events-none"
-            style={{
-              left: ripple.x,
-              top: ripple.y,
-              borderColor: variant === "left" ? "hsl(270 95% 65%)" : "hsl(35 100% 60%)",
-            }}
-            initial={{ width: 0, height: 0, x: 0, y: 0, opacity: 1 }}
-            animate={{ width: 300, height: 300, x: -150, y: -150, opacity: 0 }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            onAnimationComplete={() => {
-              setRipples((prev) => prev.filter((r) => r.id !== ripple.id));
-            }}
-          />
-        ))}
-
         {/* Absorbing vortex animation */}
         <AnimatePresence>
           {isAbsorbing && (
@@ -339,43 +267,16 @@ const GlassSphere = ({ label, image, onImageUpload, onRemoveImage, isConnected, 
             />
           )}
         </AnimatePresence>
-
-        {/* Success sparkles */}
-        <AnimatePresence>
-          {image && (
-            <>
-              {[...Array(8)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute"
-                  style={{
-                    left: "50%",
-                    top: "50%",
-                  }}
-                  initial={{ scale: 0, x: 0, y: 0 }}
-                  animate={{
-                    scale: [0, 1, 0],
-                    x: Math.cos((i / 8) * Math.PI * 2) * 80,
-                    y: Math.sin((i / 8) * Math.PI * 2) * 80,
-                  }}
-                  transition={{ delay: 0.1 * i, duration: 0.6 }}
-                >
-                  <Sparkles className="w-4 h-4 text-secondary" />
-                </motion.div>
-              ))}
-            </>
-          )}
-        </AnimatePresence>
       </motion.div>
 
-      {/* Label with glow */}
+      {/* Label */}
       <motion.p
         className="text-center mt-5 text-sm font-semibold tracking-[0.2em] uppercase"
         style={{
           color: variant === "left" ? "hsl(270 95% 75%)" : "hsl(35 100% 70%)",
           textShadow: variant === "left"
-            ? "0 0 20px hsl(270 95% 65% / 0.5)"
-            : "0 0 20px hsl(35 100% 60% / 0.5)",
+            ? "0 0 15px hsl(270 95% 65% / 0.4)"
+            : "0 0 15px hsl(35 100% 60% / 0.4)",
         }}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

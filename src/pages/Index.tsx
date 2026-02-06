@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
-import { Heart, User as UserIcon, LogOut, History, Settings, Palette } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Heart, User as UserIcon, LogOut, History, Settings, Palette, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import BananaLogo from "@/components/BananaLogo";
@@ -161,25 +161,6 @@ const Index = () => {
     }
   }, []);
 
-  // Mouse tracking for interactive effects
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const smoothMouseX = useSpring(mouseX, {
-    stiffness: 50,
-    damping: 20
-  });
-  const smoothMouseY = useSpring(mouseY, {
-    stiffness: 50,
-    damping: 20
-  });
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [mouseX, mouseY]);
 
   // Progress calculation
   useEffect(() => {
@@ -393,46 +374,21 @@ const Index = () => {
       {/* Particle field for ambient effect */}
       <ParticleField isActive={appState === "result"} intensity="medium" />
 
-      {/* Ambient background effects */}
+      {/* Ambient background effect - single blob */}
       <div className="fixed inset-0 pointer-events-none">
         <motion.div className="absolute w-96 h-96 rounded-full" style={{
         top: "10%",
         left: "10%",
-        background: "radial-gradient(circle, hsl(270 95% 65% / 0.08), transparent 70%)",
-        filter: "blur(60px)"
+        background: "radial-gradient(circle, hsl(270 95% 65% / 0.06), transparent 70%)",
       }} animate={{
-        scale: [1, 1.2, 1],
-        opacity: [0.3, 0.5, 0.3]
+        scale: [1, 1.15, 1],
+        opacity: [0.2, 0.35, 0.2]
       }} transition={{
-        duration: 8,
+        duration: 12,
         repeat: Infinity,
         ease: "easeInOut"
       }} />
-        <motion.div className="absolute w-80 h-80 rounded-full" style={{
-        bottom: "20%",
-        right: "15%",
-        background: "radial-gradient(circle, hsl(35 100% 60% / 0.05), transparent 70%)",
-        filter: "blur(50px)"
-      }} animate={{
-        scale: [1, 1.3, 1],
-        opacity: [0.2, 0.4, 0.2]
-      }} transition={{
-        duration: 10,
-        repeat: Infinity,
-        ease: "easeInOut",
-        delay: 2
-      }} />
       </div>
-
-      {/* Cursor glow */}
-      <motion.div className="fixed w-64 h-64 rounded-full pointer-events-none z-0" style={{
-      x: smoothMouseX,
-      y: smoothMouseY,
-      translateX: "-50%",
-      translateY: "-50%",
-      background: "radial-gradient(circle, hsl(270 95% 65% / 0.06), transparent 60%)",
-      filter: "blur(30px)"
-    }} />
 
       {/* Mobile Navigation FAB */}
       <MobileNavFAB
@@ -704,58 +660,6 @@ const Index = () => {
               type: "spring",
               stiffness: 100
             }}>
-                  {/* Decorative corner elements */}
-                  <motion.div className="absolute top-3 left-3 w-8 h-8" style={{
-                borderLeft: "2px solid hsl(270 95% 65% / 0.4)",
-                borderTop: "2px solid hsl(270 95% 65% / 0.4)"
-              }} animate={{
-                opacity: [0.4, 0.8, 0.4]
-              }} transition={{
-                duration: 2,
-                repeat: Infinity
-              }} />
-                  <motion.div className="absolute top-3 right-3 w-8 h-8" style={{
-                borderRight: "2px solid hsl(35 100% 60% / 0.4)",
-                borderTop: "2px solid hsl(35 100% 60% / 0.4)"
-              }} animate={{
-                opacity: [0.4, 0.8, 0.4]
-              }} transition={{
-                duration: 2,
-                repeat: Infinity,
-                delay: 0.5
-              }} />
-                  <motion.div className="absolute bottom-3 left-3 w-8 h-8" style={{
-                borderLeft: "2px solid hsl(35 100% 60% / 0.4)",
-                borderBottom: "2px solid hsl(35 100% 60% / 0.4)"
-              }} animate={{
-                opacity: [0.4, 0.8, 0.4]
-              }} transition={{
-                duration: 2,
-                repeat: Infinity,
-                delay: 1
-              }} />
-                  <motion.div className="absolute bottom-3 right-3 w-8 h-8" style={{
-                borderRight: "2px solid hsl(270 95% 65% / 0.4)",
-                borderBottom: "2px solid hsl(270 95% 65% / 0.4)"
-              }} animate={{
-                opacity: [0.4, 0.8, 0.4]
-              }} transition={{
-                duration: 2,
-                repeat: Infinity,
-                delay: 1.5
-              }} />
-
-                  {/* Scanning line effect */}
-                  <motion.div className="absolute left-0 right-0 h-[2px] pointer-events-none" style={{
-                background: "linear-gradient(90deg, transparent, hsl(270 95% 65% / 0.5), transparent)",
-                boxShadow: "0 0 10px hsl(270 95% 65% / 0.3)"
-              }} animate={{
-                y: [0, 300, 0]
-              }} transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }} />
 
                   <div className="flex justify-center gap-6 relative z-10">
                     <motion.div whileHover={{
@@ -835,7 +739,18 @@ const Index = () => {
 
                     <GlowingBorder>
                       <GenerateButton onGenerate={handleTransform} onAddFrame={handleAddFrame} onReset={handleReset} isGenerating={isGenerating} disabled={!bothImagesUploaded} />
-                    </GlowingBorder>
+              </GlowingBorder>
+
+              {/* Privacy Notice */}
+              <motion.div
+                className="flex items-center justify-center gap-2 text-xs text-muted-foreground/70 mt-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Your images are processed securely and not stored permanently. They are automatically deleted after processing.</span>
+              </motion.div>
                   </motion.div>}
               </AnimatePresence>
 

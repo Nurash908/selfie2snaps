@@ -70,69 +70,14 @@ const HolographicCard = ({
         }}
         transition={{ duration: 0.3 }}
       >
-        {/* Holographic shimmer overlay */}
-        <motion.div
-          className="absolute inset-0 pointer-events-none z-10"
-          style={{
-            background: `
-              linear-gradient(
-                135deg,
-                transparent 0%,
-                hsl(270 95% 75% / 0.1) 25%,
-                hsl(35 100% 70% / 0.1) 50%,
-                hsl(300 80% 70% / 0.1) 75%,
-                transparent 100%
-              )
-            `,
-            backgroundSize: "200% 200%",
-            mixBlendMode: "overlay",
-          }}
-          animate={{
-            backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-        />
-
         {/* Dynamic highlight based on mouse position */}
         <motion.div
           className="absolute inset-0 pointer-events-none z-20"
           style={{
             background: useTransform(
               [gradientX, gradientY],
-              ([x, y]) => `radial-gradient(circle at ${x}% ${y}%, hsl(0 0% 100% / 0.1), transparent 50%)`
+              ([x, y]) => `radial-gradient(circle at ${x}% ${y}%, hsl(0 0% 100% / 0.08), transparent 50%)`
             ),
-          }}
-        />
-
-        {/* Rainbow edge effect */}
-        <motion.div
-          className="absolute inset-0 rounded-2xl pointer-events-none"
-          style={{
-            background: `
-              linear-gradient(90deg, 
-                hsl(270 95% 65% / 0.3) 0%, 
-                hsl(35 100% 60% / 0.3) 33%, 
-                hsl(300 80% 60% / 0.3) 66%, 
-                hsl(270 95% 65% / 0.3) 100%
-              )
-            `,
-            backgroundSize: "300% 100%",
-            mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-            maskComposite: "exclude",
-            padding: "1px",
-            borderRadius: "16px",
-          }}
-          animate={{
-            backgroundPosition: ["0% 0%", "100% 0%", "0% 0%"],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "linear",
           }}
         />
 
