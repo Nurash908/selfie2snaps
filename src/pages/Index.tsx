@@ -942,10 +942,10 @@ const Index = () => {
         {/* Footer */}
         <motion.footer className="mt-16 pt-8 border-t border-border/20 text-center" initial={{
         opacity: 0
-      }} animate={{
+      }} whileInView={{
         opacity: 1
-      }} transition={{
-        delay: 1.5
+      }} viewport={{ once: true }} transition={{
+        duration: 0.6
       }}>
           <div className="flex flex-col items-center gap-3">
             <div className="inline-flex items-center gap-2 text-xs font-mono text-muted-foreground">
