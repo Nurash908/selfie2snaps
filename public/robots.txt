@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://selfie2snaps.lovable.app/sitemap.xml

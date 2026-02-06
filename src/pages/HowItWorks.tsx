@@ -18,6 +18,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import FloatingOrbs from "@/components/FloatingOrbs";
+import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 
 const steps = [
   {
@@ -121,6 +123,11 @@ const HowItWorks = () => {
         background: "linear-gradient(180deg, hsl(250 30% 8%) 0%, hsl(250 25% 5%) 100%)",
       }}
     >
+      <SEOHead
+        title="How It Works"
+        description="Learn how to use Selfie2Snap in 4 simple steps. Upload, choose a style, generate, and download your AI-transformed photo."
+        path="/how-it-works"
+      />
       <FloatingOrbs intensity="low" />
 
       {/* Header */}
@@ -245,32 +252,7 @@ const HowItWorks = () => {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border/30 py-8 px-4">
-        <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-foreground transition-colors">
-            Home
-          </Link>
-          <Link to="/about" className="hover:text-foreground transition-colors">
-            About
-          </Link>
-          <Link to="/how-it-works" className="hover:text-foreground transition-colors">
-            How It Works
-          </Link>
-          <Link to="/privacy" className="hover:text-foreground transition-colors">
-            Privacy Policy
-          </Link>
-          <Link to="/terms" className="hover:text-foreground transition-colors">
-            Terms of Service
-          </Link>
-          <Link to="/contact" className="hover:text-foreground transition-colors">
-            Contact
-          </Link>
-        </div>
-        <p className="text-center text-muted-foreground text-xs mt-4">
-          © {new Date().getFullYear()} Selfie2Snap. All rights reserved.
-        </p>
-      </footer>
+      <Footer />
     </div>
   );
 };
