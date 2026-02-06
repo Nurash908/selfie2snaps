@@ -45,6 +45,7 @@ import TryAnotherButton from "@/components/TryAnotherButton";
 import SideBySideComparison from "@/components/SideBySideComparison";
 import QuickRegenerateButton from "@/components/QuickRegenerateButton";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -375,6 +376,11 @@ const Index = () => {
   return <div className="min-h-screen relative overflow-x-hidden" style={{
     background: "linear-gradient(180deg, hsl(250 30% 8%) 0%, hsl(250 25% 5%) 100%)"
   }}>
+      <SEOHead
+        title="Selfie2Snap – AI Photo Transformation"
+        description="Transform your selfies into stunning AI-generated artwork in seconds. Choose from multiple styles including Anime, Cinematic, Sketch, and more. Free to use."
+        path="/"
+      />
       {/* Confetti effect on success */}
       <SuccessConfetti trigger={showConfetti} onComplete={handleConfettiComplete} />
 

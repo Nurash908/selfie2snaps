@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Sparkles, Users, Zap, Shield, Heart } from "lucide-react";
+import { ArrowLeft, Sparkles, Users, Zap, Shield, Heart, Globe, Linkedin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FloatingOrbs from "@/components/FloatingOrbs";
+import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 
 const About = () => {
   return (
@@ -12,9 +14,26 @@ const About = () => {
         background: "linear-gradient(180deg, hsl(250 30% 8%) 0%, hsl(250 25% 5%) 100%)",
       }}
     >
+      <SEOHead
+        title="About Selfie2Snap"
+        description="Learn about Selfie2Snap, the AI-powered photo transformation platform built by Nurash Weerasinghe from Sri Lanka. Our mission, values, and story."
+        path="/about"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Selfie2Snap",
+          url: "https://selfie2snaps.lovable.app",
+          description: "AI-powered photo transformation platform",
+          founder: {
+            "@type": "Person",
+            name: "Nurash Weerasinghe",
+            url: "https://www.linkedin.com/in/nurash-weerasinghe/",
+          },
+          address: { "@type": "PostalAddress", addressCountry: "LK" },
+        }}
+      />
       <FloatingOrbs intensity="low" />
 
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b border-border/30 bg-background/80">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
@@ -28,10 +47,8 @@ const About = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="pt-24 pb-16 px-4">
         <div className="max-w-4xl mx-auto">
-          {/* Hero Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -42,10 +59,48 @@ const About = () => {
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               We're on a mission to help everyone create stunning, professional-quality photos 
-              using the power of artificial intelligence. Transform your everyday selfies into 
-              extraordinary works of art with just a few clicks.
+              using the power of artificial intelligence.
             </p>
           </motion.div>
+
+          {/* Creator Section */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="mb-16"
+          >
+            <div className="p-6 md:p-8 rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur-sm">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Users className="w-10 h-10 text-primary" />
+                </div>
+                <div className="text-center md:text-left">
+                  <h2 className="text-2xl font-bold text-foreground mb-2">Built by Nurash Weerasinghe</h2>
+                  <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+                    <Globe className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Sri Lanka 🇱🇰</span>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed mb-4">
+                    Selfie2Snap was created with a simple belief: everyone deserves access to 
+                    professional photo editing tools without the steep learning curve or expensive 
+                    software. As a passionate developer and photography enthusiast, I combined 
+                    cutting-edge AI technology with intuitive design to build a platform that 
+                    makes photo transformation accessible to everyone around the world.
+                  </p>
+                  <a
+                    href="https://www.linkedin.com/in/nurash-weerasinghe/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-primary hover:underline"
+                  >
+                    <Linkedin className="w-4 h-4" />
+                    Connect on LinkedIn
+                  </a>
+                </div>
+              </div>
+            </div>
+          </motion.section>
 
           {/* Our Story */}
           <motion.section
@@ -60,23 +115,23 @@ const About = () => {
             </h2>
             <div className="prose prose-invert max-w-none">
               <p className="text-muted-foreground leading-relaxed mb-4">
-                Selfie2Snap was born from a simple idea: everyone deserves access to professional 
-                photo editing tools without the steep learning curve or expensive software. We 
-                noticed that while AI was revolutionizing many industries, creating beautiful 
-                photos still required either expensive equipment, professional photographers, 
-                or hours of manual editing.
+                Selfie2Snap was born from a simple observation: while AI was revolutionizing 
+                many industries, creating beautiful photos still required either expensive 
+                equipment, professional photographers, or hours of manual editing. There had to 
+                be a better way.
               </p>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                Our team of AI researchers, designers, and photography enthusiasts came together 
-                to build a platform that makes photo transformation accessible to everyone. Whether 
-                you're a social media content creator, a small business owner needing professional 
-                headshots, or someone who just wants their photos to look amazing – Selfie2Snap 
-                is here for you.
+                Starting from Sri Lanka, we set out to build a platform that makes professional 
+                photo transformation accessible to everyone, regardless of their location, 
+                budget, or technical skills. Whether you're a social media content creator, a 
+                small business owner needing professional headshots, or someone who simply wants 
+                their photos to look amazing, Selfie2Snap is here for you.
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                Today, thousands of users trust Selfie2Snap to transform their selfies into 
-                stunning artworks. From anime-style portraits to professional business headshots, 
-                our AI-powered platform delivers consistent, high-quality results in seconds.
+                Today, users from around the world trust Selfie2Snap to transform their selfies 
+                into stunning artworks. From anime-style portraits to professional business 
+                headshots, our AI-powered platform delivers consistent, high-quality results in 
+                seconds.
               </p>
             </div>
           </motion.section>
@@ -96,23 +151,19 @@ const About = () => {
               {[
                 {
                   title: "AI-Powered Transformations",
-                  description:
-                    "Our advanced AI models analyze your photos and apply professional-grade enhancements, style transfers, and artistic effects automatically.",
+                  description: "Our advanced AI models analyze your photos and apply professional-grade enhancements, style transfers, and artistic effects automatically.",
                 },
                 {
                   title: "Multiple Creative Styles",
-                  description:
-                    "Choose from a variety of styles including Natural, Cinematic, Anime, Sketch, Vintage, Neon, Watercolor, and Pop Art to match your creative vision.",
+                  description: "Choose from Natural, Cinematic, Anime, Sketch, Vintage, Neon, Watercolor, and Pop Art to match your creative vision.",
                 },
                 {
                   title: "Custom Backgrounds",
-                  description:
-                    "Transport yourself anywhere with our AI-generated backgrounds – from tropical beaches to bustling city streets, the possibilities are endless.",
+                  description: "Transport yourself anywhere with AI-generated backgrounds – from tropical beaches to bustling city streets.",
                 },
                 {
                   title: "Instant Processing",
-                  description:
-                    "No waiting around. Our optimized AI pipeline delivers stunning results in seconds, not minutes or hours.",
+                  description: "No waiting around. Our optimized AI pipeline delivers stunning results in seconds, not minutes or hours.",
                 },
               ].map((feature, index) => (
                 <motion.div
@@ -122,12 +173,8 @@ const About = () => {
                   transition={{ delay: 0.3 + index * 0.1 }}
                   className="p-6 rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm"
                 >
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    {feature.description}
-                  </p>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">{feature.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
                 </motion.div>
               ))}
             </div>
@@ -141,31 +188,15 @@ const About = () => {
             className="mb-16"
           >
             <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
-              <Users className="w-6 h-6 text-primary" />
+              <Shield className="w-6 h-6 text-primary" />
               Our Values
             </h2>
             <div className="space-y-4">
               {[
-                {
-                  title: "User Privacy First",
-                  description:
-                    "Your photos are yours. We process images securely and never store or share your personal photos without consent.",
-                },
-                {
-                  title: "Continuous Innovation",
-                  description:
-                    "We're constantly improving our AI models and adding new features based on user feedback and the latest research.",
-                },
-                {
-                  title: "Accessibility",
-                  description:
-                    "Great photo editing shouldn't require expensive software or years of training. We make professional results accessible to everyone.",
-                },
-                {
-                  title: "Quality Without Compromise",
-                  description:
-                    "We never sacrifice image quality for speed. Every photo processed through Selfie2Snap meets our high standards.",
-                },
+                { title: "User Privacy First", description: "Your photos are yours. We process images securely and never store or share your personal photos without consent." },
+                { title: "Continuous Innovation", description: "We're constantly improving our AI models and adding new features based on user feedback and the latest research." },
+                { title: "Accessibility", description: "Great photo editing shouldn't require expensive software or years of training. We make professional results accessible to everyone." },
+                { title: "Quality Without Compromise", description: "We never sacrifice image quality for speed. Every photo processed through Selfie2Snap meets our high standards." },
               ].map((value, index) => (
                 <motion.div
                   key={value.title}
@@ -184,35 +215,6 @@ const About = () => {
             </div>
           </motion.section>
 
-          {/* Security */}
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mb-16"
-          >
-            <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-              <Shield className="w-6 h-6 text-primary" />
-              Security & Privacy
-            </h2>
-            <div className="p-6 rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm">
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                We take your privacy seriously. All image processing is done on secure servers 
-                with enterprise-grade encryption. Your photos are processed in real-time and 
-                are not stored on our servers after processing is complete unless you explicitly 
-                save them to your account.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                We comply with GDPR, CCPA, and other major privacy regulations. For more 
-                details, please read our{" "}
-                <Link to="/privacy" className="text-primary hover:underline">
-                  Privacy Policy
-                </Link>
-                .
-              </p>
-            </div>
-          </motion.section>
-
           {/* CTA */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -220,11 +222,9 @@ const About = () => {
             transition={{ delay: 0.5 }}
             className="text-center"
           >
-            <h2 className="text-2xl font-bold text-foreground mb-4">
-              Ready to Transform Your Selfies?
-            </h2>
+            <h2 className="text-2xl font-bold text-foreground mb-4">Ready to Transform Your Selfies?</h2>
             <p className="text-muted-foreground mb-6">
-              Join thousands of users creating stunning photos with Selfie2Snap.
+              Join users worldwide creating stunning photos with Selfie2Snap.
             </p>
             <Link to="/">
               <Button size="lg" className="bg-primary hover:bg-primary/90">
@@ -236,32 +236,7 @@ const About = () => {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border/30 py-8 px-4">
-        <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-foreground transition-colors">
-            Home
-          </Link>
-          <Link to="/about" className="hover:text-foreground transition-colors">
-            About
-          </Link>
-          <Link to="/how-it-works" className="hover:text-foreground transition-colors">
-            How It Works
-          </Link>
-          <Link to="/privacy" className="hover:text-foreground transition-colors">
-            Privacy Policy
-          </Link>
-          <Link to="/terms" className="hover:text-foreground transition-colors">
-            Terms of Service
-          </Link>
-          <Link to="/contact" className="hover:text-foreground transition-colors">
-            Contact
-          </Link>
-        </div>
-        <p className="text-center text-muted-foreground text-xs mt-4">
-          © {new Date().getFullYear()} Selfie2Snap. All rights reserved.
-        </p>
-      </footer>
+      <Footer />
     </div>
   );
 };
