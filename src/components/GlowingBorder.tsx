@@ -21,26 +21,9 @@ const GlowingBorder = ({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Animated border gradient */}
+      {/* Animated border gradient - single layer only */}
       <motion.div
         className="absolute -inset-[2px] rounded-2xl opacity-75"
-        style={{
-          background: `linear-gradient(90deg, ${colors.join(", ")}, ${colors[0]})`,
-          backgroundSize: "200% 100%",
-        }}
-        animate={{
-          backgroundPosition: ["0% 0%", "200% 0%"],
-        }}
-        transition={{
-          duration: speed,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-      />
-      
-      {/* Glow effect */}
-      <motion.div
-        className="absolute -inset-[2px] rounded-2xl blur-md opacity-50"
         style={{
           background: `linear-gradient(90deg, ${colors.join(", ")}, ${colors[0]})`,
           backgroundSize: "200% 100%",
